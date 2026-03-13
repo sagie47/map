@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Rajdhani", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  body {
+    @apply bg-black text-zinc-300 antialiased;
+    font-family: var(--font-sans);
+  }
+
+  /* Custom Scrollbar for HUD feel */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #000;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 0;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #555;
+  }
+}
+
+/* Utility classes for the HUD look */
+@layer utilities {
+  .hud-panel {
+    @apply bg-[#0a0a0a] border border-[#1f1f1f] rounded-none shadow-none;
+  }
+  .hud-text-muted {
+    @apply text-[#666666] font-mono text-[10px] uppercase tracking-[0.15em];
+  }
+  .hud-value {
+    @apply font-mono text-zinc-100;
+  }
+  .hud-accent {
+    @apply text-[#f97316]; /* Orange */
+  }
+  .hud-success {
+    @apply text-[#22c55e]; /* Green */
+  }
+
+  /* Leaflet Popup Overrides */
+  .hud-popup .leaflet-popup-content-wrapper {
+    @apply bg-transparent shadow-none p-0 rounded-none;
+  }
+  .hud-popup .leaflet-popup-tip-container {
+    @apply hidden;
+  }
+  .hud-popup .leaflet-popup-content {
+    @apply m-0;
+  }
+}
