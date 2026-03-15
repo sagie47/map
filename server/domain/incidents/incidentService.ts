@@ -3,6 +3,7 @@ import { signalEventsRepo } from '../../db/repositories/signalEventsRepo';
 import { calculateConfidence } from './confidenceEngine';
 import { determineStatus, isTransitionAllowed } from './incidentStateMachine';
 import { INCIDENT_STATUSES, INCIDENT_SEVERITIES, IncidentStatus } from '../../../shared/constants/statuses';
+import { incidentTransitionsService } from './incidentTransitionsService';
 
 export interface NormalizedDetection {
   beaconId: string;
@@ -66,6 +67,8 @@ export class IncidentService {
         source_type: 'satellite'
       });
 
+      incidentTransitionsService.recordInitialTransition(incidentId, initialStatus, 0.4);
+
       const incident = incidentsRepo.getById(incidentId);
       events.push({ type: 'INCIDENT_CREATED', payload: incident });
     } else {
@@ -105,6 +108,16 @@ export class IncidentService {
     
     if (isTransitionAllowed(currentIncident.status as IncidentStatus, proposedStatus)) {
       newStatus = proposedStatus;
+      
+      if (newStatus !== currentIncident.status) {
+        incidentTransitionsService.recordStatusChange(
+          incidentId,
+          currentIncident.status as string,
+          newStatus,
+          newConfidence,
+          eventId
+        );
+      }
     }
 
     incidentsRepo.updateIncident(incidentId, {
@@ -135,6 +148,8 @@ export class IncidentService {
 
     if (isTransitionAllowed(incident.status as IncidentStatus, INCIDENT_STATUSES.RESOLVED)) {
       incidentsRepo.resolveIncident(incidentId, reason);
+      
+      incidentTransitionsService.recordResolution(incidentId, reason);
       
       const updated = incidentsRepo.getById(incidentId);
       events.push({ type: 'INCIDENT_RESOLVED', payload: updated });

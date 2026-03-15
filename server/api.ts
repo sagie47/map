@@ -5,6 +5,9 @@ import { receiversRepo } from './db/repositories/receiversRepo';
 import { toIncidentDto } from './api/dto/incidentDto';
 import { toReceiverDto } from './api/dto/receiverDto';
 import { toTimelineDto } from './api/dto/timelineDto';
+import { replayService } from './domain/replay/replayService';
+import { replayFrameBuilder } from './domain/replay/replayFrameBuilder';
+import { analyticsService } from './domain/analytics/analyticsService';
 
 export function setupApi(app: Express) {
   app.get('/api/health', (req, res) => {
@@ -28,33 +31,47 @@ export function setupApi(app: Express) {
     res.json(events.map(toTimelineDto));
   });
 
+  app.get('/api/incidents/:id/timeline', (req, res) => {
+    const timeline = replayService.getTimeline(req.params.id);
+    
+    if (!timeline) return res.status(404).json({ error: 'Timeline not found' });
+    res.json(timeline);
+  });
+
+  app.get('/api/incidents/:id/replay', (req, res) => {
+    const replay = replayService.getReplayData(req.params.id);
+    
+    if (!replay) return res.status(404).json({ error: 'Replay not found' });
+    res.json(replay);
+  });
+
+  app.get('/api/incidents/:id/replay/frames', (req, res) => {
+    const replay = replayService.getReplayData(req.params.id);
+    
+    if (!replay) return res.status(404).json({ error: 'Replay not found' });
+    
+    const frames = replayFrameBuilder.buildFrames({
+      events: replay.events,
+      transitions: replay.transitions,
+      bounds: replay.bounds
+    });
+    
+    res.json(frames);
+  });
+
   app.get('/api/receivers', (req, res) => {
     const receivers = receiversRepo.listReceivers();
     res.json(receivers.map(toReceiverDto));
   });
 
   app.get('/api/analytics', (req, res) => {
-    const incidentStats = incidentsRepo.getAnalyticsStats();
-    const receiverStats = receiversRepo.getAnalyticsStats();
-    
-    // Mock time-series data for the last 7 days since real data will be sparse on startup
-    const now = new Date();
-    const timeSeries = Array.from({ length: 7 }).map((_, i) => {
-      const d = new Date(now);
-      d.setDate(d.getDate() - (6 - i));
-      return {
-        name: d.toLocaleDateString('en-US', { weekday: 'short' }),
-        incidents: Math.floor(Math.random() * 20) + 5
-      };
-    });
+    const days = parseInt(req.query.days as string) || 7;
+    const analytics = analyticsService.getAnalytics(days);
+    res.json(analytics);
+  });
 
-    res.json({
-      activeIncidents: incidentStats.activeIncidents,
-      totalIncidents: incidentStats.totalIncidents,
-      falsePositives: incidentStats.falsePositives,
-      receiverUptime: receiverStats.receiverUptime,
-      domainStats: incidentStats.domainStats,
-      timeSeries
-    });
+  app.get('/api/analytics/kpi', (req, res) => {
+    const kpi = analyticsService.getKPISummary();
+    res.json(kpi);
   });
 }

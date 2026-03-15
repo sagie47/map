@@ -68,3 +68,67 @@ CREATE TABLE IF NOT EXISTS notifications (
   payload_json TEXT,
   FOREIGN KEY(incident_id) REFERENCES incidents(id)
 );
+
+CREATE TABLE IF NOT EXISTS incident_state_transitions (
+  id TEXT PRIMARY KEY,
+  incident_id TEXT NOT NULL,
+  from_status TEXT,
+  to_status TEXT NOT NULL,
+  confidence_score REAL,
+  reason TEXT,
+  source_event_id TEXT,
+  transitioned_at DATETIME NOT NULL,
+  FOREIGN KEY(incident_id) REFERENCES incidents(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_transitions_incident_id ON incident_state_transitions(incident_id);
+CREATE INDEX IF NOT EXISTS idx_transitions_incident_at ON incident_state_transitions(transitioned_at);
+
+CREATE TABLE IF NOT EXISTS operator_actions (
+  id TEXT PRIMARY KEY,
+  incident_id TEXT,
+  action_type TEXT NOT NULL,
+  operator_id TEXT,
+  payload_json TEXT,
+  created_at DATETIME NOT NULL,
+  FOREIGN KEY(incident_id) REFERENCES incidents(id)
+);
+
+CREATE TABLE IF NOT EXISTS audit_log (
+  id TEXT PRIMARY KEY,
+  event_type TEXT NOT NULL,
+  entity_type TEXT NOT NULL,
+  entity_id TEXT,
+  actor_type TEXT NOT NULL,
+  actor_id TEXT,
+  action TEXT NOT NULL,
+  details_json TEXT,
+  created_at DATETIME NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS system_health (
+  id TEXT PRIMARY KEY,
+  component TEXT NOT NULL,
+  status TEXT NOT NULL,
+  message TEXT,
+  metadata_json TEXT,
+  recorded_at DATETIME NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS alert_history (
+  id TEXT PRIMARY KEY,
+  alert_type TEXT NOT NULL,
+  source_name TEXT,
+  severity TEXT NOT NULL,
+  message TEXT NOT NULL,
+  triggered_at DATETIME NOT NULL,
+  acknowledged_at DATETIME,
+  resolved_at DATETIME
+);
+
+CREATE INDEX IF NOT EXISTS idx_operator_actions_incident ON operator_actions(incident_id);
+CREATE INDEX IF NOT EXISTS idx_audit_log_entity ON audit_log(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log(created_at);
+CREATE INDEX IF NOT EXISTS idx_system_health_component ON system_health(component);
+CREATE INDEX IF NOT EXISTS idx_system_health_recorded ON system_health(recorded_at);
+CREATE INDEX IF NOT EXISTS idx_alert_history_triggered ON alert_history(triggered_at);
