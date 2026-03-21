@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { fetchIncidents, fetchIncident, fetchIncidentEvents } from './api';
+import { fetchIncidents, fetchIncident, fetchIncidentEvents, fetchRecentEvents } from './api';
 import { useSocketSubscription } from '../connection/hooks';
 import { WEBSOCKET_EVENTS } from "@shared/types/websocket";
 import { useNotificationStore } from '../notifications/store';
@@ -274,19 +274,18 @@ export function useIncidentEvents(id: string | null) {
 export function useLiveEvents() {
   const queryClient = useQueryClient();
 
-  // We can store a global list of recent events in react-query or zustand.
-  // Let's use react-query for consistency, initialized to empty array.
   const query = useQuery({
     queryKey: ['live-events'],
-    queryFn: () => [] as SignalEvent[],
-    staleTime: Infinity,
+    queryFn: () => fetchRecentEvents(100),
+    staleTime: 30000,
   });
 
   useSocketSubscription((type, payload) => {
     if (type === WEBSOCKET_EVENTS.EVENT_INGESTED) {
       queryClient.setQueryData<SignalEvent[]>(['live-events'], (old) => {
         if (!old) return [payload];
-        return [payload, ...old].slice(0, 100);
+        const next = [payload, ...old.filter((event) => event.id !== payload.id)];
+        return next.slice(0, 100);
       });
     }
   });

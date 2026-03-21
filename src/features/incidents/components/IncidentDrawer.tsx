@@ -17,18 +17,22 @@ import { Incident } from "@shared/types/incidents";
 import { formatDistanceToNow, format } from "date-fns";
 
 import { INCIDENT_STATUSES, INCIDENT_SEVERITIES } from "@shared/constants/statuses";
-import { useIncidentEvents } from "../hooks";
+import { SignalEvent } from "@shared/types/events";
 import { updateIncident } from "../api";
 import { useNotificationStore } from "../../notifications/store";
+import { SarIntel } from "../sar";
 
 export function IncidentDrawer({
   incident,
+  events,
+  sarIntel,
   onClose,
 }: {
   incident: Incident;
+  events: SignalEvent[];
+  sarIntel: SarIntel | null;
   onClose: () => void;
 }) {
-  const { data: events = [], isLoading: loading } = useIncidentEvents(incident.id);
   const [notes, setNotes] = useState((incident as any).notes || "");
   const [assignedTo, setAssignedTo] = useState((incident as any).assignedTo || "");
   const [isUpdating, setIsUpdating] = useState(false);
@@ -118,6 +122,39 @@ export function IncidentDrawer({
 
         {/* Core Details */}
         <div className="space-y-4">
+          {sarIntel && (
+            <div className="border border-[#1f1f1f] bg-[#090909]">
+              <div className="px-3 py-2 border-b border-[#1f1f1f] bg-[#101010]">
+                <div className="text-[10px] font-mono uppercase tracking-widest text-[#f97316]">
+                  {sarIntel.brief.headline}
+                </div>
+                <div className="mt-1 text-[10px] font-mono uppercase tracking-widest text-zinc-400">
+                  {sarIntel.brief.priority}
+                </div>
+              </div>
+              <div className="px-3 py-3 space-y-3">
+                <p className="text-[11px] leading-5 text-zinc-300">
+                  {sarIntel.brief.summary}
+                </p>
+                <div className="border border-[#1f1f1f] bg-black px-3 py-2">
+                  <div className="text-[10px] font-mono uppercase tracking-widest text-[#666]">
+                    Recommended Action
+                  </div>
+                  <p className="mt-1 text-[11px] leading-5 text-zinc-200">
+                    {sarIntel.brief.recommendedAction}
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  {sarIntel.brief.lines.map((line) => (
+                    <div key={line} className="text-[10px] font-mono text-zinc-400 leading-5">
+                      {line}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           <DetailRow
             icon={<Radio className="w-4 h-4" />}
             label="Beacon ID"
@@ -160,16 +197,139 @@ export function IncidentDrawer({
           </button>
         </div>
 
+        {sarIntel && (
+          <div className="space-y-3">
+            <h3 className="hud-text-muted mb-3">PROBABLE SEARCH AREA</h3>
+            <div className="grid grid-cols-2 gap-2">
+              <DataTile
+                label="SEARCH WINDOW"
+                value={`${sarIntel.searchArea.searchWindowHours} hr`}
+              />
+              <DataTile
+                label="AREA SIZE"
+                value={`${Math.round(sarIntel.searchArea.areaKm2)} km2`}
+              />
+              <DataTile
+                label="MAJOR AXIS"
+                value={`${Math.round(sarIntel.searchArea.semiMajorKm * 2)} km`}
+              />
+              <DataTile
+                label="MINOR AXIS"
+                value={`${Math.round(sarIntel.searchArea.semiMinorKm * 2)} km`}
+              />
+              <DataTile
+                label="SEARCH BEARING"
+                value={`${Math.round(sarIntel.searchArea.headingDeg)} deg`}
+              />
+              <DataTile
+                label="LAST SIGNAL AGE"
+                value={formatRelativeMinutes(sarIntel.searchArea.ageMinutes)}
+              />
+              <DataTile
+                label="DRIFT FACTOR"
+                value={sarIntel.searchArea.driftFactor.toFixed(2)}
+              />
+              <DataTile
+                label="COVERAGE"
+                value={`${sarIntel.coverage.score.toFixed(0)} ${sarIntel.coverage.label}`}
+              />
+            </div>
+          </div>
+        )}
+
+        {sarIntel && (
+          <div>
+            <h3 className="hud-text-muted mb-3">COVERAGE CONFIDENCE</h3>
+            <div className="border border-[#1f1f1f] bg-[#090909]">
+              <div className="grid grid-cols-3 gap-px bg-[#1f1f1f]">
+                <DataTile label="CONFIDENCE SCORE" value={`${sarIntel.coverage.score.toFixed(0)}%`} />
+                <DataTile label="RECEIVERS" value={`${sarIntel.coverage.nearbyReceivers}`} />
+                <DataTile label="LIVE ASSETS" value={`${sarIntel.coverage.mobileAssets}`} />
+              </div>
+              <div className="px-3 py-3 space-y-2">
+                <div className="text-[10px] font-mono uppercase tracking-widest text-[#22d3ee]">
+                  {sarIntel.coverage.label} coverage support
+                </div>
+                {sarIntel.coverage.notes.map((note) => (
+                  <div key={note} className="text-[10px] font-mono leading-5 text-zinc-400">
+                    {note}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {sarIntel && sarIntel.recommendations.length > 0 && (
+          <div>
+            <h3 className="hud-text-muted mb-3">INTERCEPT RECOMMENDATIONS</h3>
+            <div className="space-y-2">
+              {sarIntel.recommendations.map((recommendation, index) => (
+                <div key={recommendation.asset.id} className="border border-[#1f1f1f] bg-[#0b0b0b] px-3 py-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-[10px] font-mono uppercase tracking-widest text-[#666]">
+                        Option {index + 1} // {recommendation.asset.kind}
+                      </div>
+                      <div className="mt-1 text-[12px] font-mono text-zinc-100">
+                        {recommendation.asset.name}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-[10px] font-mono uppercase tracking-widest text-[#666]">
+                        ETA
+                      </div>
+                      <div className="mt-1 text-[12px] font-mono text-[#22c55e]">
+                        {formatRelativeMinutes(recommendation.etaMinutes)}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-2 text-[10px] font-mono text-zinc-400">
+                    {recommendation.rationale}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {sarIntel && sarIntel.dispatchTasks.length > 0 && (
+          <div>
+            <h3 className="hud-text-muted mb-3">DISPATCH TASKING</h3>
+            <div className="space-y-2">
+              {sarIntel.dispatchTasks.map((task) => (
+                <div key={task.id} className="border border-[#1f1f1f] bg-[#0b0b0b] px-3 py-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-[10px] font-mono uppercase tracking-widest text-[#666]">
+                        {task.owner}
+                      </div>
+                      <div className="mt-1 text-[12px] font-mono text-zinc-100">
+                        {task.title}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-[10px] font-mono uppercase tracking-widest text-[#666]">
+                        {task.status}
+                      </div>
+                      <div className="mt-1 text-[12px] font-mono text-[#f97316]">{task.etaLabel}</div>
+                    </div>
+                  </div>
+                  <div className="mt-2 text-[10px] font-mono text-zinc-400">
+                    {task.rationale}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Detection History */}
         <div>
           <h3 className="hud-text-muted mb-3">
             DETECTION HISTORY
           </h3>
-          {loading ? (
-            <div className="text-[10px] font-mono text-[#666] animate-pulse">
-              /LOADING_EVENTS...
-            </div>
-          ) : events.length === 0 ? (
+          {events.length === 0 ? (
             <div className="text-[10px] font-mono text-[#666]">/NO_EVENTS_FOUND</div>
           ) : (
             <div className="space-y-3">
@@ -269,6 +429,34 @@ export function IncidentDrawer({
       </div>
     </div>
   );
+}
+
+function DataTile({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="border border-[#1f1f1f] bg-[#0b0b0b] px-3 py-2">
+      <div className="text-[9px] font-mono uppercase tracking-widest text-[#666]">
+        {label}
+      </div>
+      <div className="mt-1 text-[12px] font-mono text-zinc-100">
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function formatRelativeMinutes(value: number) {
+  if (value < 60) {
+    return `${Math.round(value)} min`;
+  }
+  const hours = Math.floor(value / 60);
+  const minutes = Math.round(value % 60);
+  return minutes === 0 ? `${hours} hr` : `${hours} hr ${minutes} min`;
 }
 
 function DetailRow({

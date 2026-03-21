@@ -53,6 +53,15 @@ export function setupApi(app: Express) {
     res.json(events.map(toTimelineDto));
   });
 
+  app.get('/api/events/recent', (req, res) => {
+    const requestedLimit = Number.parseInt(req.query.limit as string, 10);
+    const limit = Number.isFinite(requestedLimit)
+      ? Math.min(Math.max(requestedLimit, 1), 250)
+      : 100;
+    const events = signalEventsRepo.listRecent(limit);
+    res.json(events.map(toTimelineDto));
+  });
+
   app.get('/api/incidents/:id/timeline', (req, res) => {
     const timeline = replayService.getTimeline(req.params.id);
     

@@ -19,6 +19,12 @@ export async function fetchIncidentEvents(id: string): Promise<SignalEvent[]> {
   return response.json();
 }
 
+export async function fetchRecentEvents(limit = 100): Promise<SignalEvent[]> {
+  const response = await fetch(`/api/events/recent?limit=${limit}`);
+  if (!response.ok) throw new Error('Failed to fetch recent events');
+  return response.json();
+}
+
 export async function updateIncident(id: string, updates: { status?: string; notes?: string; assignedTo?: string }): Promise<Incident> {
   const response = await fetch(`/api/incidents/${id}`, {
     method: 'PATCH',
