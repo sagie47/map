@@ -9,6 +9,7 @@ import { replayService } from './domain/replay/replayService';
 import { replayFrameBuilder } from './domain/replay/replayFrameBuilder';
 import { analyticsService } from './domain/analytics/analyticsService';
 import { notificationService } from './domain/notifications/notificationService';
+import { notificationRepo } from './domain/notifications/notificationRepo';
 
 export function setupApi(app: Express) {
   app.get('/api/health', (req, res) => {
@@ -85,13 +86,17 @@ export function setupApi(app: Express) {
   });
 
   app.get('/api/notifications/unread-count', (req, res) => {
-    const { notificationRepo } = require('./domain/notifications/notificationRepo');
     const count = notificationRepo.getUnreadCount();
     res.json({ count });
   });
 
   app.post('/api/notifications/:id/read', (req, res) => {
-    notificationService.markAsRead(req.params.id);
+    const wasMarkedAsRead = notificationService.markAsRead(req.params.id);
+
+    if (!wasMarkedAsRead) {
+      return res.status(404).json({ error: 'Notification not found' });
+    }
+
     res.json({ success: true });
   });
 }

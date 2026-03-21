@@ -47,21 +47,32 @@ export class IncidentsRepo {
   }
 
   updateIncident(id: string, updates: any) {
-    // Build dynamic query to handle optional fields
-    const fields = ['last_seen_at = ?', 'estimated_lat = ?', 'estimated_lng = ?', 'confidence_score = ?', 'status = ?'];
-    const values: any[] = [updates.last_seen_at, updates.estimated_lat, updates.estimated_lng, updates.confidence_score, updates.status];
-    
-    if (updates.confirmed_by_receiver_ids !== undefined) {
-      fields.push('confirmed_by_receiver_ids = ?');
-      values.push(updates.confirmed_by_receiver_ids);
+    const columnMappings: Array<[string, any]> = [
+      ['last_seen_at', updates.last_seen_at],
+      ['estimated_lat', updates.estimated_lat],
+      ['estimated_lng', updates.estimated_lng],
+      ['confidence_score', updates.confidence_score],
+      ['status', updates.status],
+      ['confirmed_by_receiver_ids', updates.confirmed_by_receiver_ids],
+      ['receiver_count', updates.receiver_count]
+    ];
+
+    const fields: string[] = [];
+    const values: any[] = [];
+
+    columnMappings.forEach(([column, value]) => {
+      if (value !== undefined) {
+        fields.push(`${column} = ?`);
+        values.push(value);
+      }
+    });
+
+    if (fields.length === 0) {
+      return;
     }
-    if (updates.receiver_count !== undefined) {
-      fields.push('receiver_count = ?');
-      values.push(updates.receiver_count);
-    }
-    
+
     values.push(id);
-    
+
     db.prepare(`UPDATE incidents SET ${fields.join(', ')} WHERE id = ?`).run(...values);
   }
 

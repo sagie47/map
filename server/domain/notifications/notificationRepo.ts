@@ -2,6 +2,19 @@ import { db } from '../../db/client';
 import { Notification, NotificationStatus } from '../../../shared/types/notifications';
 import { NotificationType, NotificationChannel } from '../../../shared/types/notifications';
 
+function safeParsePayload(row: any) {
+  if (!row.payload_json) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(row.payload_json);
+  } catch (error) {
+    console.warn(`[NotificationRepo] Failed to parse payload_json for notification ${row.id}:`, error);
+    return {};
+  }
+}
+
 function rowToNotification(row: any): Notification {
   return {
     id: row.id,
@@ -9,7 +22,7 @@ function rowToNotification(row: any): Notification {
     type: row.notification_type as NotificationType,
     channel: row.destination as NotificationChannel,
     sentAt: row.sent_at,
-    payload: row.payload_json ? JSON.parse(row.payload_json) : {},
+    payload: safeParsePayload(row),
     readAt: row.read_at || undefined,
     status: row.status as NotificationStatus
   };
@@ -37,20 +50,32 @@ export class NotificationRepo {
   /**
    * Update notification status.
    */
-  public updateNotificationStatus(id: string, status: NotificationStatus): void {
+  public updateNotificationStatus(id: string, status: NotificationStatus, sentAt?: string | null): void {
+    const fields = ['status = ?'];
+    const values: Array<string | null> = [status];
+
+    if (sentAt !== undefined) {
+      fields.push('sent_at = ?');
+      values.push(sentAt);
+    }
+
+    values.push(id);
+
     db.prepare(`
-      UPDATE notifications SET status = ? WHERE id = ?
-    `).run(status, id);
+      UPDATE notifications SET ${fields.join(', ')} WHERE id = ?
+    `).run(...values);
   }
 
   /**
    * Mark a notification as read.
    */
-  public markAsRead(id: string): void {
+  public markAsRead(id: string): boolean {
     const readAt = new Date().toISOString();
-    db.prepare(`
+    const result = db.prepare(`
       UPDATE notifications SET status = ?, read_at = ? WHERE id = ?
     `).run(NotificationStatus.READ, readAt, id);
+
+    return result.changes > 0;
   }
 
   /**

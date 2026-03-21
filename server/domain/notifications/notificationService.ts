@@ -1,4 +1,4 @@
-import { Notification, NotificationType, NotificationChannel, NotificationPayload, NotificationStatus } from '../../../shared/types/notifications';
+import { Notification, NotificationType, NotificationChannel, NotificationStatus } from '../../../shared/types/notifications';
 import { notificationRepo } from './notificationRepo';
 import { INCIDENT_STATUSES } from '../../../shared/constants/statuses';
 
@@ -17,6 +17,7 @@ export interface IncidentData {
   estimated_lng?: number;
   external_identifier?: string;
   beacon_type?: string;
+  isTest?: boolean;
 }
 
 export class NotificationService {
@@ -29,34 +30,31 @@ export class NotificationService {
       return;
     }
 
-    // Skip test incidents
-    if (incident.domain_type === 'test' || incident.beacon_type === 'test') {
+    if ((incident.isTest ?? false) || incident.domain_type === 'test' || incident.beacon_type === 'test') {
       return;
     }
-
-    const payload: NotificationPayload = {
-      incidentId: incident.id,
-      beaconId: incident.beacon_id,
-      beaconType: incident.domain_type || incident.beacon_type || 'unknown',
-      severity: incident.severity,
-      confidenceScore: incident.confidence_score,
-      location: incident.estimated_lat && incident.estimated_lng
-        ? { lat: incident.estimated_lat, lng: incident.estimated_lng }
-        : undefined,
-      message: `Incident ${incident.id} has reached HIGH_CONFIDENCE status with score ${incident.confidence_score.toFixed(2)}`
-    };
 
     const notification: Notification = {
       id: `NOTIF-${generateId()}`,
       incidentId: incident.id,
       type: NotificationType.HIGH_CONFIDENCE,
-      channel: NotificationChannel.EMAIL, // Default channel, can be configured
-      sentAt: new Date().toISOString(),
-      payload,
+      channel: NotificationChannel.EMAIL,
+      sentAt: '',
+      payload: {
+        incidentId: incident.id,
+        beaconId: incident.beacon_id,
+        beaconType: incident.domain_type || incident.beacon_type || 'unknown',
+        severity: incident.severity,
+        confidenceScore: incident.confidence_score,
+        location: incident.estimated_lat != null && incident.estimated_lng != null
+          ? { lat: incident.estimated_lat, lng: incident.estimated_lng }
+          : undefined,
+        message: `Incident ${incident.id} has reached HIGH_CONFIDENCE status with score ${incident.confidence_score.toFixed(2)}`
+      },
       status: NotificationStatus.PENDING
     };
 
-    this.sendNotification(notification);
+    void this.sendNotification(notification);
   }
 
   /**
@@ -64,10 +62,8 @@ export class NotificationService {
    * Currently stubs to console.log, structured for real provider integration.
    */
   public async sendNotification(notification: Notification): Promise<void> {
-    // Save notification to database
     notificationRepo.saveNotification(notification);
 
-    // Stub implementation - logs for now, ready for real provider integration
     console.log('[NotificationService] Sending notification:', {
       id: notification.id,
       type: notification.type,
@@ -76,25 +72,35 @@ export class NotificationService {
       payload: notification.payload
     });
 
-    // Simulate sending based on channel
-    switch (notification.channel) {
-      case NotificationChannel.EMAIL:
-        await this.sendEmail(notification);
-        break;
-      case NotificationChannel.SMS:
-        await this.sendSms(notification);
-        break;
-      case NotificationChannel.WEBHOOK:
-        await this.sendWebhook(notification);
-        break;
-      case NotificationChannel.IN_APP:
-        await this.sendInApp(notification);
-        break;
-    }
+    try {
+      switch (notification.channel) {
+        case NotificationChannel.EMAIL:
+          await this.sendEmail(notification);
+          break;
+        case NotificationChannel.SMS:
+          await this.sendSms(notification);
+          break;
+        case NotificationChannel.WEBHOOK:
+          await this.sendWebhook(notification);
+          break;
+        case NotificationChannel.IN_APP:
+          await this.sendInApp(notification);
+          break;
+      }
 
-    // Update status to sent
-    notification.status = NotificationStatus.SENT;
-    notificationRepo.updateNotificationStatus(notification.id, NotificationStatus.SENT);
+      notification.status = NotificationStatus.SENT;
+      notification.sentAt = new Date().toISOString();
+      notificationRepo.updateNotificationStatus(notification.id, NotificationStatus.SENT, notification.sentAt);
+    } catch (error) {
+      notification.status = NotificationStatus.FAILED;
+      notificationRepo.updateNotificationStatus(notification.id, NotificationStatus.FAILED, null);
+      console.error('[NotificationService] Failed to send notification:', {
+        id: notification.id,
+        channel: notification.channel,
+        incidentId: notification.incidentId,
+        error
+      });
+    }
   }
 
   /**
@@ -150,8 +156,8 @@ export class NotificationService {
   /**
    * Mark a notification as read.
    */
-  public markAsRead(notificationId: string): void {
-    notificationRepo.markAsRead(notificationId);
+  public markAsRead(notificationId: string): boolean {
+    return notificationRepo.markAsRead(notificationId);
   }
 
   /**

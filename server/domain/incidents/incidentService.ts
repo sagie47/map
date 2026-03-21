@@ -131,16 +131,6 @@ export class IncidentService {
           boostedConfidence,
           eventId
         );
-
-        // Trigger notification when incident reaches HIGH_CONFIDENCE
-        if (newStatus === INCIDENT_STATUSES.HIGH_CONFIDENCE) {
-          // Pass currentIncident data - alertOnThreshold will validate status
-          notificationService.alertOnThreshold({
-            ...currentIncident,
-            status: newStatus,
-            confidence_score: boostedConfidence
-          });
-        }
       }
     }
 
@@ -155,6 +145,17 @@ export class IncidentService {
     });
 
     const updatedIncident = incidentsRepo.getById(incidentId);
+
+    if (updatedIncident && newStatus !== currentIncident.status && newStatus === INCIDENT_STATUSES.HIGH_CONFIDENCE) {
+      notificationService.alertOnThreshold({
+        ...updatedIncident,
+        status: newStatus,
+        confidence_score: boostedConfidence,
+        estimated_lat: stats.avgLat,
+        estimated_lng: stats.avgLng,
+        isTest: detection.isTest
+      });
+    }
     
     // Only emit INCIDENT_UPDATED if it's not a brand new incident (we already emitted CREATED)
     // Actually, even if it's new, we just updated it with the first detection.
