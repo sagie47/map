@@ -1,119 +1,90 @@
 # Agent Guidelines for BeaconScope
 
-This document provides guidelines for agents working on the BeaconScope codebase.
+Real-time beacon monitoring and incident response console with global receiver network.
 
-## Project Overview
+**Tech Stack:** React 19, Vite 6, Tailwind CSS 4, TypeScript ~5.8, Express, WebSockets, better-sqlite3
 
-BeaconScope is a real-time, full-stack beacon monitoring and incident response console. It simulates a global network of receiver stations detecting distress signals.
-
-**Tech Stack:**
-- Frontend: React 19, Vite 6, Tailwind CSS 4, TypeScript ~5.8
-- Backend: Express, Node.js, WebSockets (ws), better-sqlite3
-- Additional: React Router 7, Zustand, TanStack React Query, Recharts, Leaflet
+---
 
 ## Build Commands
 
 ```bash
-# Install dependencies
-npm install
-
-# Start development server (runs both backend and frontend)
-npm run dev
-
-# Build for production
-npm run build
-
-# Preview production build
-npm run preview
-
-# Clean build artifacts
-npm run clean
-
-# Run TypeScript type checking (linting)
-npm run lint
+npm install          # Install dependencies
+npm run dev          # Start development (backend + frontend via tsx server.ts)
+npm run build        # Production build (Vite build for frontend)
+npm run preview      # Preview production build
+npm run clean        # Clean build artifacts
+npm run lint         # TypeScript type checking (tsc --noEmit)
 ```
 
 **Environment Variables:**
-- `RUNTIME_MODE` - Set to `dev`, `demo`, `live`, or `mixed` (default: `dev`)
+- `RUNTIME_MODE` - `dev`, `demo`, `live`, or `mixed` (default: `dev`)
 - `SIMULATOR_ENABLED` - Enable/disable simulator (default: true in dev/demo)
-- `LOG_LEVEL` - Set logging level (`debug`, `info`, `warn`, `error`)
+- `LOG_LEVEL` - `debug`, `info`, `warn`, `error`
 - `PORT` - Server port (default: 3000)
+- `DISABLE_HMR` - Disable Vite hot module replacement
+- `GEMINI_API_KEY` - API key for Gemini integration
 
-**Note:** There is currently no test framework configured. Do not add tests unless explicitly requested.
+**Note:** No test framework configured in this project. Tests exist in `mission-control/` subdirectory.
 
-## Code Style Guidelines
+---
 
-### General
+## TypeScript Configuration
 
-- Use TypeScript for all new code
-- Use ES2022 target with ESNext modules
-- Use `moduleResolution: "bundler"` for imports
-
-### Imports and Path Aliases
-
-The project uses path aliases configured in `tsconfig.json` and `vite.config.ts`:
-
-```typescript
-// Use @ for src directory
-import { something } from '@/components/Something';
-
-// Use @shared for shared types and constants
-import { Incident } from '@shared/types/incidents';
-```
-
-### React Components
-
-- Use functional components with hooks
-- Use named exports for components: `export function ComponentName() {}`
-- Use React 19 JSX transform (no React import needed for JSX)
-- Use `react-router` for routing with `BrowserRouter`, `Routes`, `Route`
-
-Example:
-```typescript
-import { Outlet, NavLink } from "react-router";
-
-export function Layout() {
-  return (
-    <div>
-      <nav>
-        <NavLink to="/path">Label</NavLink>
-      </nav>
-      <Outlet />
-    </div>
-  );
+```json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@shared/*": ["./shared/*"]
+    }
+  }
 }
 ```
 
-### Type Definitions
+- Use interfaces for object shapes; prefer string unions over enums
+- ES2022 target with ESNext modules
 
-- Place shared types in `shared/types/` directory
-- Place shared constants in `shared/constants/` directory
-- Use interfaces for object shapes
-- Use TypeScript enums sparingly; prefer string unions or const objects
+---
 
-Example:
+## Imports (Path Aliases)
+
 ```typescript
-// shared/types/domain.ts
-export type DomainType = 'marine' | 'aviation' | 'personal' | 'ground';
-
-// In types/index.ts
-export * from '@shared/types/domain';
-export * from '@shared/types/incidents';
+import { something } from '@/components/Something';      // src/ directory
+import { Incident } from '@shared/types/incidents';    // shared/ directory
 ```
 
-### Naming Conventions
+Use path aliases (`@`, `@shared`) not relative imports.
 
-- **Files**: kebab-case for files (`layout.tsx`, `signal-events-repo.ts`)
-- **Components**: PascalCase (`.tsx` files)
-- **Functions/variables**: camelCase
-- **Constants**: SCREAMING_SNAKE_CASE
-- **Types/interfaces**: PascalCase
+---
 
-### CSS and Styling
+## Naming Conventions
 
-- Use Tailwind CSS 4 with `@tailwindcss/vite` plugin
-- Use Tailwind utility classes for styling
-- Use `tailwind-merge` with `clsx` for conditional classes:
+| Type | Convention | Example |
+|------|------------|---------|
+| Files | kebab-case | `layout.tsx`, `signal-events-repo.ts` |
+| Components | PascalCase | `Layout.tsx` |
+| Functions/variables | camelCase | `getIncidents()` |
+| Constants | SCREAMING_SNAKE_CASE | `MAX_RETRIES` |
+| Types/interfaces | PascalCase | `IncidentDto` |
+| Repositories | PascalCase with Repo suffix | `IncidentsRepo` |
+| Services | PascalCase with Service suffix | `SystemHealthService` |
+
+---
+
+## React Components
+
+- Functional components with hooks
+- Named exports: `export function ComponentName() {}`
+- React 19 JSX transform available (but React is still imported for useState, useEffect, etc.)
+- Use `react-router` with `BrowserRouter`, `Routes`, `Route`
+- Pages are thin composition shells; business logic in hooks/selectors
+
+### Conditional Classes (clsx + tailwind-merge)
 
 ```typescript
 import { clsx } from 'clsx';
@@ -122,151 +93,139 @@ import { twMerge } from 'tailwind-merge';
 function cn(...inputs: (string | undefined | null | false)[]) {
   return twMerge(clsx(inputs));
 }
+
+// Usage
+<div className={cn("base-class", isActive && "active-class", className)} />
 ```
 
-### Backend (Express/Node.js)
+---
 
-- Use Express for REST API
-- Use `better-sqlite3` for database operations
-- Use WebSockets (`ws`) for real-time communication
-- Use repository pattern for database access (`server/db/repositories/`)
-- Use DTO functions for transforming data to API responses
+## Backend (Express/Node.js)
 
-Example:
+### Project Structure
+```
+server/
+├── api/routes/          # REST route handlers
+├── api/dto/             # Data transfer objects
+├── db/client.ts         # SQLite client (better-sqlite3)
+├── db/repositories/     # Database access layer (Repository pattern)
+├── domain/              # Business logic services
+├── app/                 # App-level (errorHandling, logger, featureFlags)
+├── realtime/            # WebSocket handling (ws package)
+└── ingestion/adapters/ # External data adapters
+```
+
+### Route Handler Pattern
+
 ```typescript
-// server/api.ts
-app.get('/api/incidents', (req, res) => {
-  const incidents = incidentsRepo.listWithFilters();
-  res.json(incidents.map(toIncidentDto));
-});
+// Wrap async route handlers with asyncHandler
+app.get('/api/resource/:id', asyncHandler(async (req, res) => {
+  const resource = await resourceService.getById(req.params.id);
+  if (!resource) throw new NotFoundError('Resource not found');
+  res.json(resource);
+}));
 ```
 
-### Error Handling
+### Error Classes
 
-- Use proper HTTP status codes (404 for not found, 500 for server errors)
-- Return JSON error responses: `res.status(404).json({ error: 'Not found' })`
-- Use try/catch for async operations
+```typescript
+// Use operational error classes for known errors
+throw new NotFoundError('Resource not found');      // 404
+throw new ValidationError('Invalid input');          // 400
+throw new ConflictError('Resource already exists'); // 409
+throw new OperationalError('Message', 500, 'CODE'); // Generic with status
 
-### Database
+// Global error handler catches all errors
+// Non-operational errors return generic 500 message
+```
 
-- Use SQLite with `better-sqlite3`
-- Database client in `server/db/client.ts`
-- Repositories in `server/db/repositories/`
-- Schema in `server/schema.sql`
+### Logging
 
-### State Management
+```typescript
+import { logger } from './server/app/logger';
 
-- Use Zustand for global client state
-- Use TanStack React Query for server state/data fetching
+logger.info('event_name', 'Message', { metadata });
+logger.warn('event_name', 'Message', { metadata });
+logger.error('event_name', 'Message', error, { metadata });
+```
 
-### Folder Structure
+### Security Headers (applied globally in server.ts)
+
+```typescript
+res.setHeader('X-Content-Type-Options', 'nosniff');
+res.setHeader('X-Frame-Options', 'DENY');
+res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+```
+
+### Database Access
+- All SQL in repository files or `schema.sql`
+- Use parameterized queries: `.get(id)`, `.run(values...)`, `.all()`
+- Repositories are singletons exported as `export const repo = new RepoClass()`
+
+---
+
+## Folder Structure
 
 ```
-/workspaces/map
-├── src/                    # React frontend source
-│   ├── app/               # App-level providers and config
-│   ├── components/       # Reusable UI components
-│   ├── features/         # Feature-specific code
-│   ├── pages/            # Page components
-│   └── types.ts          # Type re-exports
-├── server/               # Express backend source
-│   ├── api/              # REST API routes and DTOs
-│   ├── db/               # Database client and repositories
-│   ├── domain/           # Domain logic
-│   ├── ingestion/        # Data ingestion/simulation
-│   └── realtime/         # WebSocket handlers
-├── shared/               # Shared types and constants
-│   ├── types/            # TypeScript type definitions
-│   └── constants/        # Constants
+/map-repo
+├── src/                     # React frontend
+│   ├── app/providers.tsx    # App-level providers
+│   ├── components/          # Reusable UI components
+│   ├── features/            # Feature modules (api.ts, hooks.ts, selectors.ts)
+│   └── pages/              # Route pages
+├── server/                  # Express backend
+│   ├── api/routes/          # REST route handlers
+│   ├── api/dto/             # Data transfer objects
+│   ├── db/client.ts         # SQLite client
+│   ├── db/repositories/     # Database access layer
+│   ├── domain/              # Business logic services
+│   └── ingestion/adapters/  # External data adapters
+├── shared/
+│   ├── types/               # TypeScript definitions
+│   └── constants/           # Shared constants
 ├── package.json
 ├── vite.config.ts
 ├── tsconfig.json
-└── server.ts             # Entry point
+└── server.ts                # Entry point
 ```
 
-### Important Configuration Notes
+### Shared Types (`shared/types/`)
+`analytics.ts`, `api.ts`, `domain.ts`, `events.ts`, `incidents.ts`, `receivers.ts`, `replay.ts`, `sources.ts`, `websocket.ts`
 
-- Vite HMR can be disabled via `DISABLE_HMR` environment variable
-- Server runs on port 3000 by default
-- Database is SQLite (file-based: `beaconscope.db`)
-- Production builds are served from `dist/` directory
+---
 
-### Recommended Workflow
+## Architecture
 
-1. Run `npm run dev` to start development
-2. Run `npm run lint` before committing to check for type errors
-3. Use path aliases (`@`, `@shared`) instead of relative imports
-4. Follow existing code patterns in the codebase
+### Backend Layers
+**routes → services → repositories** - Domain logic goes in `server/domain/`
 
-## Architecture Guidelines
+### Frontend Organization
+- TanStack React Query for server state
+- Zustand for global client state
+- WebSocket handling centralized (avoid per-page connections)
 
-This project is undergoing phased architectural improvements. See `plan.md` for detailed refactoring plans.
+### Implemented Features
+- **Replay System** — Backend-driven deterministic replay via `GET /api/incidents/:id/replay` and `/frames`
+- **Analytics** — Backend-computed metrics via `GET /api/analytics`
+- **Incident Transitions** — Explicit state transitions persisted to `incident_state_transitions` table
+- **Live Data Adapters** — AIS (vessels), OpenSky (aircraft), NWS (weather alerts), CelesTrak (satellites)
 
-### Current Implementation Status (Sprint 3)
+---
 
-**Completed:**
-- ✅ Shared types (`shared/types/`) - domain, incidents, receivers, events, websocket, replay, analytics
-- ✅ Shared constants (`shared/constants/`) - statuses, thresholds
-- ✅ Backend layers - routes → services → repositories
-- ✅ Incident transitions - `incident_state_transitions` table, service, and repo
-- ✅ Replay service - `replayService.ts`, `replayFrameBuilder.ts` for deterministic frames
-- ✅ Analytics service - `analyticsService.ts` with backend-computed metrics
-- ✅ DTOs - incident, receiver, timeline, replay, analytics DTOs
+## Critical Path Priority
 
-### Current Implementation Status (Phase 4)
-
-**Completed:**
-- ✅ Adapter interface - `adapterInterface.ts` with normalized event types
-- ✅ Adapter registry - centralized adapter management
-- ✅ Polling scheduler - for polling-based adapters
-- ✅ Base adapter class - common functionality
-- ✅ AIS adapter - marine vessel tracking
-- ✅ OpenSky adapter - aviation tracking with stale track detection
-- ✅ Satellite adapter - orbital position tracking
-- ✅ GTFS adapter - ground vehicle/protobuf ingestion
-- ✅ Source health service - monitoring and observability
-- ✅ Config management - feature flags per adapter
-- ✅ Source DTOs - vessel, aircraft, satellite, ground asset positions
-
-### Current Implementation Status (Phase 5)
-
-**Completed:**
-- ✅ Structured logging - `server/app/logger.ts` with JSON logs and subsystem loggers
-- ✅ Error handling - centralized error handling middleware with proper HTTP responses
-- ✅ Feature flags - `server/app/featureFlags.ts` with dev/demo/live modes
-- ✅ System health - health endpoints and systemHealthService
-- ✅ Operator actions - service and repo for incident management actions
-- ✅ Audit trail - database table and repository for system events
-- ✅ Background jobs - stale incident, source health, and cleanup jobs
-- ✅ Data retention - cleanup job with configurable retention policies
-- ✅ Graceful shutdown - SIGTERM/SIGINT handlers
-
-### Backend Architecture (Phase 1)
-
-- **Layers**: routes -> services -> repositories
-- **Services**: Place domain logic in `server/domain/` (e.g., `incidentService.ts`, `confidenceEngine.ts`, `receiverHealthService.ts`)
-- **Repositories**: Database access in `server/db/repositories/`
-- **DTOs**: Transform data in `server/api/dto/` - routes should return DTOs, not raw rows
-- **Ingestion**: Normalize external inputs in `server/ingestion/` before passing to domain services
-- **WebSocket**: Use centralized message contracts in `shared/types/websocket.ts`
-- **No raw SQL** outside repository files or schema files
-
-### Frontend Architecture (Phase 2)
-
-- **Providers**: App-level setup in `src/app/providers.tsx`
-- **State**: Use TanStack Query for server state, Zustand for global client state
-- **Features**: Organize by feature in `src/features/` with:
-  - `api.ts` - endpoint calls
-  - `hooks.ts` - data fetching hooks
-  - `selectors.ts` - derived state
-- **Socket**: Centralize WebSocket handling, avoid per-page socket connections
-- **Pages**: Should be thin composition shells that use feature hooks/selectors
-
-### Critical Path Priority
-
-When working on this codebase, prioritize:
 1. Shared types/constants (avoid duplication)
 2. Repository pattern for DB access
 3. Service layer for business logic
 4. DTO mapping for API responses
 5. Feature-based frontend organization
+
+---
+
+## Recommended Workflow
+
+1. Run `npm run dev` to start development
+2. Run `npm run lint` before committing
+3. Use path aliases (`@`, `@shared`) not relative imports
+4. Follow existing code patterns
+5. See `ROADMAP.md` for project roadmap

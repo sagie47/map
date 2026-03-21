@@ -212,11 +212,11 @@ export function MapView({
 
   const vesselPoints = useMemo(() => {
     let visibleVessels = vessels;
-    
+
     // Viewport culling at higher zoom levels
     if (mapBounds) {
       const [[minLng, minLat], [maxLng, maxLat]] = mapBounds;
-      visibleVessels = vessels.filter(v => 
+      visibleVessels = vessels.filter(v =>
         v.lat >= minLat && v.lat <= maxLat && v.lng >= minLng && v.lng <= maxLng
       );
     }
@@ -225,7 +225,7 @@ export function MapView({
     } else {
       visibleVessels = visibleVessels.slice(0, 1200);
     }
-    
+
     return {
       type: "FeatureCollection" as const,
       features: visibleVessels.map(vessel => ({
@@ -249,15 +249,15 @@ export function MapView({
 
   const aircraftPoints = useMemo(() => {
     let visibleAircraft = aircraft;
-    
+
     if (mapBounds) {
       const [[minLng, minLat], [maxLng, maxLat]] = mapBounds;
-      visibleAircraft = aircraft.filter(a => 
+      visibleAircraft = aircraft.filter(a =>
         a.lat >= minLat && a.lat <= maxLat && a.lng >= minLng && a.lng <= maxLng
       );
     }
     visibleAircraft = visibleAircraft.slice(0, mapZoom < 4 ? 1800 : 900);
-    
+
     return {
       type: "FeatureCollection" as const,
       features: visibleAircraft.map(ac => ({
@@ -278,15 +278,15 @@ export function MapView({
 
   const satellitePoints = useMemo(() => {
     let visibleSatellites = satellites;
-    
+
     if (mapBounds) {
       const [[minLng, minLat], [maxLng, maxLat]] = mapBounds;
-      visibleSatellites = satellites.filter(s => 
+      visibleSatellites = satellites.filter(s =>
         s.lat >= minLat && s.lat <= maxLat && s.lng >= minLng && s.lng <= maxLng
       );
     }
     visibleSatellites = visibleSatellites.slice(0, mapZoom < 4 ? 1200 : 700);
-    
+
     return {
       type: "FeatureCollection" as const,
       features: visibleSatellites.map(sat => ({
@@ -952,7 +952,7 @@ export function MapView({
             />
           </Source>
         )}
-        
+
         {/* Receivers */}
         {layerVisibility.receivers && (
           <Source id="receivers" type="geojson" data={receiverPoints}>
@@ -1016,7 +1016,7 @@ export function MapView({
               minzoom={6}
               filter={["!", ["has", "point_count"]]}
               layout={{
-                "text-field": "⛴",
+                "text-field": "â›´",
                 "text-size": [
                   "interpolate", ["linear"], ["zoom"],
                   6, 10,
@@ -1191,9 +1191,9 @@ export function MapView({
 
         {/* Incidents -> Heatmap + Clusters + Points */}
         {layerVisibility.incidents && (
-          <Source 
-            id="incidents" 
-            type="geojson" 
+          <Source
+            id="incidents"
+            type="geojson"
             data={incidentPoints}
             cluster={true}
             clusterMaxZoom={14}
@@ -1236,7 +1236,7 @@ export function MapView({
                 "circle-opacity": ["interpolate", ["linear"], ["zoom"], 7, 0, 8, 1]
               }}
             />
-            
+
             {/* Unclustered Point Layer */}
             <Layer
               id="incidents-layer"
@@ -1302,8 +1302,8 @@ export function MapView({
               {/* Dynamic Header based on type */}
               <div className="px-3 py-2 bg-gradient-to-r from-[#1a1a1a] to-[#0f0f0f] border-b border-[#2a2a2a]">
                 <div className="flex items-center gap-2">
-                  <div 
-                    className="w-2 h-2 rounded-full animate-pulse" 
+                  <div
+                    className="w-2 h-2 rounded-full animate-pulse"
                     style={{ backgroundColor: popupInfo.feature.properties.type === 'vessel' ? '#a855f7' : popupInfo.feature.properties.type === 'aircraft' ? '#22d3ee' : '#3b82f6' }}
                   ></div>
                   <span className="text-[9px] uppercase tracking-widest text-[#666]">
@@ -1406,7 +1406,7 @@ export function MapView({
                     </div>
                     <div className="bg-[#0a0a0a] p-2">
                       <div className="text-[8px] uppercase tracking-wider text-[#555] mb-0.5">STATUS</div>
-                      <div className={`text-[11px] ${popupInfo.feature.properties.status === 'online' ? 'text-[#22c55e]' : 'text-red-500'}`}>
+                      <div className={`text-[11px] ${popupInfo.feature.properties.status === 'online' ? 'text-[#22c55e]' : 'text-red-500'}`}>       
                         {popupInfo.feature.properties.status?.toUpperCase()}
                       </div>
                     </div>
@@ -1422,7 +1422,7 @@ export function MapView({
                     <div className="bg-[#0a0a0a] p-2">
                       <div className="text-[8px] uppercase tracking-wider text-[#555] mb-0.5">SEVERITY</div>
                       <div className={`text-[11px] ${
-                        popupInfo.feature.properties.severity === 'high' ? 'text-red-500' : 
+                        popupInfo.feature.properties.severity === 'high' ? 'text-red-500' :
                         popupInfo.feature.properties.severity === 'medium' ? 'text-yellow-500' : 'text-green-500'
                       }`}>
                         {popupInfo.feature.properties.severity?.toUpperCase()}
