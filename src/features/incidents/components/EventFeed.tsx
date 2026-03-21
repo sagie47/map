@@ -18,6 +18,12 @@ interface AlertData {
   expires: string;
 }
 
+export interface FeedNavigationTarget {
+  incidentId: string | null;
+  center: { lng: number; lat: number } | null;
+  zoom?: number;
+}
+
 type FeedItem =
   | {
       id: string;
@@ -52,12 +58,36 @@ export function EventFeed({
   incidents,
   alerts,
   onSelectIncident,
+  onNavigate,
 }: {
   events: SignalEvent[];
   incidents: Incident[];
   alerts: AlertData[];
   onSelectIncident: (id: string) => void;
+  onNavigate: (target: FeedNavigationTarget) => void;
 }) {
+  const incidentById = new Map(incidents.map((incident) => [incident.id, incident]));
+
+  function alertCenter(alert: AlertData): { lng: number; lat: number } | null {
+    if (alert.coordinates) {
+      return { lng: alert.coordinates[0], lat: alert.coordinates[1] };
+    }
+
+    const ring = alert.polygon?.[0];
+    if (!ring || ring.length === 0) {
+      return null;
+    }
+
+    let lng = 0;
+    let lat = 0;
+    for (const [pointLng, pointLat] of ring) {
+      lng += pointLng;
+      lat += pointLat;
+    }
+
+    return { lng: lng / ring.length, lat: lat / ring.length };
+  }
+
   const items: FeedItem[] = [
     ...events.map((event) => ({
       id: event.id,
@@ -115,6 +145,27 @@ export function EventFeed({
               onClick={() => {
                 if (item.incidentId) {
                   onSelectIncident(item.incidentId);
+                  const incident = incidentById.get(item.incidentId);
+                  if (incident) {
+                    onNavigate({
+                      incidentId: incident.id,
+                      center: { lng: incident.estimatedLng, lat: incident.estimatedLat },
+                      zoom: 6,
+                    });
+                    return;
+                  }
+                }
+
+                if (item.kind === "alert") {
+                  const alert = alerts.find((entry) => `alert-${entry.alertId}` === item.id);
+                  const center = alert ? alertCenter(alert) : null;
+                  if (center) {
+                    onNavigate({
+                      incidentId: null,
+                      center,
+                      zoom: 5.2,
+                    });
+                  }
                 }
               }}
             >

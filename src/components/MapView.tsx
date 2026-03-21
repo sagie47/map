@@ -102,6 +102,12 @@ interface PathPoint {
   receiverId?: string;
 }
 
+interface FeedFocusTarget {
+  center: { lng: number; lat: number } | null;
+  zoom?: number;
+  nonce?: number;
+}
+
 export function MapView({
   incidents,
   receivers,
@@ -116,6 +122,7 @@ export function MapView({
   searchAreaLabel = null,
   leftPanelOffsetPx = 0,
   rightPanelOffsetPx = 0,
+  focusTarget = null,
   selectedIncidentId,
   onSelectIncident,
 }: {
@@ -132,6 +139,7 @@ export function MapView({
   searchAreaLabel?: string | null;
   leftPanelOffsetPx?: number;
   rightPanelOffsetPx?: number;
+  focusTarget?: FeedFocusTarget | null;
   selectedIncidentId: string | null;
   onSelectIncident: (id: string) => void;
 }) {
@@ -149,10 +157,12 @@ export function MapView({
   } | null>(null);
 
   const [mapStyle, setMapStyle] = useState<"standard" | "satellite">("standard");
+  const [mapDimension, setMapDimension] = useState<"2d" | "3d">("3d");
   const [showStyleMenu, setShowStyleMenu] = useState(false);
   const [showLayerMenu, setShowLayerMenu] = useState(false);
   const [mapBounds, setMapBounds] = useState<[[number, number], [number, number]] | null>(null);
   const [mapZoom, setMapZoom] = useState(2.5);
+  const [showFocusPulse, setShowFocusPulse] = useState(false);
   const [layerVisibility, setLayerVisibility] = useState({
     incidents: true,
     vessels: true,
@@ -403,15 +413,69 @@ export function MapView({
     };
   }, [selectedIncident, searchAreaLabel]);
 
+  const focusPulseFeature = useMemo(() => {
+    if (!focusTarget?.center || !showFocusPulse) {
+      return null;
+    }
+
+    return {
+      type: "FeatureCollection" as const,
+      features: [
+        {
+          type: "Feature" as const,
+          geometry: {
+            type: "Point" as const,
+            coordinates: [focusTarget.center.lng, focusTarget.center.lat] as [number, number],
+          },
+          properties: {},
+        },
+      ],
+    };
+  }, [focusTarget?.center, showFocusPulse]);
+
   useEffect(() => {
     if (selectedIncident && mapRef.current) {
       mapRef.current.flyTo({
         center: [selectedIncident.estimatedLng, selectedIncident.estimatedLat],
         zoom: 6,
+        pitch: mapDimension === "3d" ? 45 : 0,
         duration: 1500,
       });
     }
-  }, [selectedIncident]);
+  }, [selectedIncident, mapDimension]);
+
+  useEffect(() => {
+    if (!focusTarget?.center || !mapRef.current) {
+      return;
+    }
+
+    setShowFocusPulse(true);
+    mapRef.current.flyTo({
+      center: [focusTarget.center.lng, focusTarget.center.lat],
+      zoom: focusTarget.zoom ?? 6,
+      pitch: mapDimension === "3d" ? 45 : 0,
+      duration: 1200,
+    });
+
+    const timer = window.setTimeout(() => {
+      setShowFocusPulse(false);
+    }, 2200);
+
+    return () => window.clearTimeout(timer);
+  }, [focusTarget?.nonce, focusTarget?.center, focusTarget?.zoom, mapDimension]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) {
+      return;
+    }
+
+    map.easeTo({
+      pitch: mapDimension === "3d" ? 45 : 0,
+      bearing: 0,
+      duration: 450,
+    });
+  }, [mapDimension]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -503,54 +567,54 @@ export function MapView({
   }
 
   return (
-    <div className="relative w-full h-full bg-black">
+    <div className="relative w-full h-full bg-black overflow-hidden">
       {/* Legend */}
-      <div className="absolute bottom-4 left-4 z-[1000] pointer-events-none">
-        <div className="hud-panel p-3 pointer-events-auto bg-[#0a0a0a] border border-[#1f1f1f] rounded-none">
-          <h4 className="text-[10px] font-mono uppercase tracking-widest text-[#666] mb-2">/MAP_LEGEND</h4>
-          <div className="space-y-2 text-[10px] font-mono uppercase tracking-widest text-zinc-400">
-            <div className="flex items-center"><div className="w-2 h-2 bg-[#ef4444] border border-white mr-2 shadow-[0_0_8px_#ef4444]"></div> ACTIVE INCIDENT</div>
-            <div className="flex items-center"><div className="w-2 h-2 bg-[#22c55e] border border-white mr-2 shadow-[0_0_8px_#22c55e]"></div> RESOLVED</div>
-            <div className="flex items-center"><div className="w-2 h-2 bg-[#f97316] border border-white mr-2 shadow-[0_0_8px_#f97316]"></div> TEST BEACON</div>
-            <div className="flex items-center"><div className="w-2 h-2 bg-[#3b82f6] border border-white mr-2 shadow-[0_0_8px_#3b82f6]"></div> RECEIVER STATION</div>
-            <div className="flex items-center"><div className="w-2 h-2 bg-[#a855f7] rounded-full border border-white mr-2 shadow-[0_0_8px_#a855f7]"></div> LIVE VESSEL</div>
-            <div className="flex items-center"><div className="w-2 h-2 bg-[#22d3ee] rounded-full border border-white mr-2 shadow-[0_0_8px_#22d3ee]"></div> LIVE AIRCRAFT</div>
-            <div className="flex items-center"><div className="w-2 h-2 bg-[#f59e0b] rounded-full border border-white mr-2 shadow-[0_0_8px_#f59e0b]"></div> SATELLITES</div>
-            <div className="flex items-center"><div className="w-2 h-2 bg-gradient-to-r from-red-500 to-yellow-500 rounded-full border border-white mr-2 shadow-[0_0_8px_#ef4444]"></div> HEATMAP CLUSTER</div>
-            <div className="flex items-center"><div className="w-2 h-2 bg-[#f97316] border border-[#f97316] mr-2" style={{ borderRadius: '2px' }}></div> SEARCH AREA</div>
-            <div className="flex items-center"><div className="w-5 h-[2px] bg-[#22d3ee] mr-2 shadow-[0_0_8px_#22d3ee]"></div> INTERCEPT VECTOR</div>
+      <div 
+        className="absolute bottom-6 z-[1000] pointer-events-none transition-all duration-300"
+        style={{ left: `${leftPanelOffsetPx + 16}px` }}
+      >
+        <div className="hud-panel p-2.5 pointer-events-auto bg-[#0a0a0a]/80 border border-[#1f1f1f] rounded-none backdrop-blur-sm shadow-[0_0_20px_rgba(0,0,0,0.5)]">
+          <h4 className="text-[9px] font-mono uppercase tracking-[0.2em] text-[#444] mb-2 px-0.5">/LEGEND</h4>
+          <div className="space-y-1.5 text-[9px] font-mono uppercase tracking-widest text-zinc-400">
+            <div className="flex items-center"><div className="w-1.5 h-1.5 bg-[#ef4444] mr-2"></div> INCIDENT</div>
+            <div className="flex items-center"><div className="w-1.5 h-1.5 bg-[#3b82f6] mr-2"></div> STATION</div>
+            <div className="flex items-center"><div className="w-1.5 h-1.5 bg-[#a855f7] rounded-full mr-2"></div> VESSEL</div>
+            <div className="flex items-center"><div className="w-1.5 h-1.5 bg-[#22d3ee] rounded-full mr-2"></div> AIRCRAFT</div>
           </div>
         </div>
       </div>
 
-      {/* Map Style Controls */}
-      <div className="absolute top-4 left-4 z-[1000]">
-        <div className="relative flex gap-2">
+      {/* Map Style & Layer Controls */}
+      <div 
+        className="absolute top-6 z-[1000] transition-all duration-300 flex flex-col gap-2"
+        style={{ left: `${leftPanelOffsetPx + 16}px` }}
+      >
+        <div className="flex gap-1.5">
           <div className="relative">
             <button 
               onClick={() => setShowStyleMenu(!showStyleMenu)}
-              className="hud-panel p-2 flex items-center justify-center bg-[#0a0a0a] border border-[#1f1f1f] hover:bg-[#111] transition-colors text-zinc-300"
+              className="hud-panel w-8 h-8 flex items-center justify-center bg-[#0a0a0a]/80 border border-[#1f1f1f] hover:bg-[#111] transition-colors text-zinc-400 hover:text-white"
               title="Map Style"
             >
-              <Layers className="w-5 h-5" />
+              <Layers className="w-4 h-4" />
             </button>
           
             {showStyleMenu && (
-              <div className="absolute top-full left-0 mt-2 hud-panel p-1 bg-[#0a0a0a] border border-[#1f1f1f] flex flex-col gap-1 w-32 pointer-events-auto">
+              <div className="absolute top-0 left-full ml-1 hud-panel p-1 bg-[#0a0a0a]/95 border border-[#1f1f1f] flex flex-col gap-0.5 w-28 pointer-events-auto backdrop-blur-md">
                 <button
                   onClick={() => { setMapStyle("standard"); setShowStyleMenu(false); }}
                   className={cn(
-                    "px-3 py-2 text-left text-[11px] font-mono uppercase tracking-widest transition-colors",
-                    mapStyle === "standard" ? "bg-[#1f1f1f] text-white" : "text-zinc-500 hover:bg-[#111] hover:text-zinc-300"
+                    "px-2 py-1.5 text-left text-[9px] font-mono uppercase tracking-widest transition-colors",
+                    mapStyle === "standard" ? "bg-[#1f1f1f] text-[#f97316]" : "text-zinc-500 hover:bg-[#111] hover:text-zinc-300"
                   )}
                 >
-                  STANDARD 3D
+                  STANDARD
                 </button>
                 <button
                   onClick={() => { setMapStyle("satellite"); setShowStyleMenu(false); }}
                   className={cn(
-                    "px-3 py-2 text-left text-[11px] font-mono uppercase tracking-widest transition-colors",
-                    mapStyle === "satellite" ? "bg-[#1f1f1f] text-white" : "text-zinc-500 hover:bg-[#111] hover:text-zinc-300"
+                    "px-2 py-1.5 text-left text-[9px] font-mono uppercase tracking-widest transition-colors",
+                    mapStyle === "satellite" ? "bg-[#1f1f1f] text-[#f97316]" : "text-zinc-500 hover:bg-[#111] hover:text-zinc-300"
                   )}
                 >
                   SATELLITE
@@ -562,96 +626,36 @@ export function MapView({
           <div className="relative">
             <button 
               onClick={() => setShowLayerMenu(!showLayerMenu)}
-              className="hud-panel p-2 flex items-center justify-center bg-[#0a0a0a] border border-[#1f1f1f] hover:bg-[#111] transition-colors text-zinc-300"
+              className="hud-panel w-8 h-8 flex items-center justify-center bg-[#0a0a0a]/80 border border-[#1f1f1f] hover:bg-[#111] transition-colors text-zinc-400 hover:text-white"
               title="Layer Toggles"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
             </button>
           
             {showLayerMenu && (
-              <div className="absolute top-full left-0 mt-2 hud-panel p-1 bg-[#0a0a0a] border border-[#1f1f1f] flex flex-col gap-1 w-40 pointer-events-auto">
-                <button
-                  onClick={() => toggleLayer('incidents')}
-                  className={cn(
-                    "px-3 py-2 text-left text-[11px] font-mono uppercase tracking-widest transition-colors flex items-center justify-between",
-                    layerVisibility.incidents ? "bg-[#1f1f1f] text-white" : "text-zinc-500 hover:bg-[#111] hover:text-zinc-300"
-                  )}
-                >
-                  <span>INCIDENTS</span>
-                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: layerVisibility.incidents ? '#ef4444' : '#333' }} />
-                </button>
-                <button
-                  onClick={() => toggleLayer('vessels')}
-                  className={cn(
-                    "px-3 py-2 text-left text-[11px] font-mono uppercase tracking-widest transition-colors flex items-center justify-between",
-                    layerVisibility.vessels ? "bg-[#1f1f1f] text-white" : "text-zinc-500 hover:bg-[#111] hover:text-zinc-300"
-                  )}
-                >
-                  <span>VESSELS</span>
-                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: layerVisibility.vessels ? '#a855f7' : '#333' }} />
-                </button>
-                <button
-                  onClick={() => toggleLayer('aircraft')}
-                  className={cn(
-                    "px-3 py-2 text-left text-[11px] font-mono uppercase tracking-widest transition-colors flex items-center justify-between",
-                    layerVisibility.aircraft ? "bg-[#1f1f1f] text-white" : "text-zinc-500 hover:bg-[#111] hover:text-zinc-300"
-                  )}
-                >
-                  <span>AIRCRAFT</span>
-                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: layerVisibility.aircraft ? '#22d3ee' : '#333' }} />
-                </button>
-                <button
-                  onClick={() => toggleLayer('satellites')}
-                  className={cn(
-                    "px-3 py-2 text-left text-[11px] font-mono uppercase tracking-widest transition-colors flex items-center justify-between",
-                    layerVisibility.satellites ? "bg-[#1f1f1f] text-white" : "text-zinc-500 hover:bg-[#111] hover:text-zinc-300"
-                  )}
-                >
-                  <span>SATELLITES</span>
-                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: layerVisibility.satellites ? '#f59e0b' : '#333' }} />
-                </button>
-                <button
-                  onClick={() => toggleLayer('searchArea')}
-                  className={cn(
-                    "px-3 py-2 text-left text-[11px] font-mono uppercase tracking-widest transition-colors flex items-center justify-between",
-                    layerVisibility.searchArea ? "bg-[#1f1f1f] text-white" : "text-zinc-500 hover:bg-[#111] hover:text-zinc-300"
-                  )}
-                >
-                  <span>SEARCH AREA</span>
-                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: layerVisibility.searchArea ? '#f97316' : '#333' }} />
-                </button>
-                <button
-                  onClick={() => toggleLayer('receivers')}
-                  className={cn(
-                    "px-3 py-2 text-left text-[11px] font-mono uppercase tracking-widest transition-colors flex items-center justify-between",
-                    layerVisibility.receivers ? "bg-[#1f1f1f] text-white" : "text-zinc-500 hover:bg-[#111] hover:text-zinc-300"
-                  )}
-                >
-                  <span>RECEIVERS</span>
-                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: layerVisibility.receivers ? '#3b82f6' : '#333' }} />
-                </button>
-                <button
-                  onClick={() => toggleLayer('heatmap')}
-                  className={cn(
-                    "px-3 py-2 text-left text-[11px] font-mono uppercase tracking-widest transition-colors flex items-center justify-between",
-                    layerVisibility.heatmap ? "bg-[#1f1f1f] text-white" : "text-zinc-500 hover:bg-[#111] hover:text-zinc-300"
-                  )}
-                >
-                  <span>HEATMAP</span>
-                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: layerVisibility.heatmap ? '#f97316' : '#333' }} />
-                </button>
-                <button
-                  onClick={() => toggleLayer('alerts')}
-                  className={cn(
-                    "px-3 py-2 text-left text-[11px] font-mono uppercase tracking-widest transition-colors flex items-center justify-between",
-                    layerVisibility.alerts ? "bg-[#1f1f1f] text-white" : "text-zinc-500 hover:bg-[#111] hover:text-zinc-300"
-                  )}
-                >
-                  <span>ALERTS</span>
-                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: layerVisibility.alerts ? '#ef4444' : '#333' }} />
-                </button>
+              <div className="absolute top-0 left-full ml-1 hud-panel p-1 bg-[#0a0a0a]/95 border border-[#1f1f1f] flex flex-col gap-0.5 w-36 pointer-events-auto backdrop-blur-md">
+                {[
+                  { id: 'incidents', label: 'INCIDENTS', color: '#ef4444' },
+                  { id: 'vessels', label: 'VESSELS', color: '#a855f7' },
+                  { id: 'aircraft', label: 'AIRCRAFT', color: '#22d3ee' },
+                  { id: 'satellites', label: 'SATELLITES', color: '#f59e0b' },
+                  { id: 'searchArea', label: 'SEARCH AREA', color: '#f97316' },
+                  { id: 'receivers', label: 'RECEIVERS', color: '#3b82f6' },
+                ].map((layer) => (
+                  <button
+                    key={layer.id}
+                    onClick={() => toggleLayer(layer.id as any)}
+                    className={cn(
+                      "px-2 py-1.5 text-left text-[9px] font-mono uppercase tracking-widest transition-colors flex items-center justify-between",
+                      layerVisibility[layer.id as keyof typeof layerVisibility] ? "bg-[#1f1f1f] text-white" : "text-zinc-500 hover:bg-[#111] hover:text-zinc-300"
+                    )}
+                  >
+                    <span>{layer.label}</span>
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: layerVisibility[layer.id as keyof typeof layerVisibility] ? layer.color : '#333' }} />
+                  </button>
+                ))}
               </div>
             )}
           </div>
@@ -665,13 +669,14 @@ export function MapView({
           longitude: 10,
           latitude: 35,
           zoom: 2.5,
-          pitch: 0,
+          pitch: 45,
           bearing: 0,
         }}
         reuseMaps={true}
         mapStyle={mapStyle === "satellite" ? "mapbox://styles/mapbox/satellite-streets-v12" : "mapbox://styles/mapbox/dark-v11"}
+        projection={mapDimension === "3d" ? "globe" : "mercator"}
         interactiveLayerIds={INTERACTIVE_LAYER_IDS}
-        terrain={mapStyle === "satellite" ? { source: 'mapbox-dem', exaggeration: 1.5 } : undefined}
+        terrain={mapStyle === "satellite" && mapDimension === "3d" ? { source: 'mapbox-dem', exaggeration: 1.5 } : undefined}
         onLoad={updateViewportMetrics}
         onMoveEnd={updateViewportMetrics}
         onClick={(e) => {
@@ -818,6 +823,44 @@ export function MapView({
                 "text-color": "#fcd34d",
                 "text-halo-color": "#050505",
                 "text-halo-width": 1.4,
+              }}
+            />
+          </Source>
+        )}
+
+        {focusPulseFeature && (
+          <Source id="feed-focus-pulse" type="geojson" data={focusPulseFeature}>
+            <Layer
+              id="feed-focus-pulse-outer"
+              type="circle"
+              paint={{
+                "circle-color": "#f97316",
+                "circle-radius": [
+                  "interpolate", ["linear"], ["zoom"],
+                  2, 18,
+                  6, 34,
+                  10, 52
+                ],
+                "circle-opacity": 0.12,
+                "circle-stroke-width": 2,
+                "circle-stroke-color": "#fb923c",
+                "circle-stroke-opacity": 0.8,
+              }}
+            />
+            <Layer
+              id="feed-focus-pulse-core"
+              type="circle"
+              paint={{
+                "circle-color": "#f97316",
+                "circle-radius": [
+                  "interpolate", ["linear"], ["zoom"],
+                  2, 5,
+                  6, 8,
+                  10, 12
+                ],
+                "circle-opacity": 0.85,
+                "circle-stroke-width": 2,
+                "circle-stroke-color": "#fff7ed",
               }}
             />
           </Source>
@@ -1443,6 +1486,8 @@ export function MapView({
             />
           </Source>
         )}
+
+        <NavigationControl position="top-right" />
       </Map>
     </div>
   );

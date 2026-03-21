@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router";
 import { PanelRightClose, PanelRightOpen } from "lucide-react";
 import { MapView } from "../../../components/MapView";
 import { IncidentDrawer } from "./IncidentDrawer";
-import { EventFeed } from "./EventFeed";
+import { EventFeed, FeedNavigationTarget } from "./EventFeed";
 import { INCIDENT_STATUSES, RECEIVER_STATUSES } from "../../../../shared/constants/statuses";
 import { useIncidents, useLiveEvents, useVessels, useAlerts, useIncidentEvents } from "../hooks";
 import { useReceivers } from "../../receivers/hooks";
@@ -20,8 +20,10 @@ export function OperationsDashboardView() {
   const [leftHudCollapsed, setLeftHudCollapsed] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showCollapsedPreview, setShowCollapsedPreview] = useState(false);
-  const leftViewportInset = leftHudCollapsed ? 56 : 320;
-  const rightViewportInset = sidebarCollapsed ? 56 : 384;
+  const [feedFocusTarget, setFeedFocusTarget] = useState<(FeedNavigationTarget & { nonce: number }) | null>(null);
+  const [viewportWidth, setViewportWidth] = useState(() =>
+    typeof window === "undefined" ? 1440 : window.innerWidth,
+  );
 
   const { data: incidents = [] } = useIncidents();
   const { data: receivers = [] } = useReceivers();
@@ -203,26 +205,48 @@ export function OperationsDashboardView() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
+  useEffect(() => {
+    const onResize = () => setViewportWidth(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  const isCompactViewport = viewportWidth < 1280;
+  const isTightViewport = viewportWidth < 1080;
+  const isPhoneViewport = viewportWidth < 900;
+  const effectiveLeftHudCollapsed = leftHudCollapsed || isCompactViewport;
+  const effectiveSidebarCollapsed = sidebarCollapsed || isPhoneViewport;
+  const leftViewportInset = effectiveLeftHudCollapsed ? 56 : 320;
+  const rightViewportInset = effectiveSidebarCollapsed ? 56 : 384;
+  const availableViewportWidth = Math.max(320, viewportWidth - leftViewportInset - rightViewportInset - 48);
+  const visibleTickerItems = isPhoneViewport ? opsTicker.slice(0, 2) : isTightViewport ? opsTicker.slice(0, 3) : opsTicker;
+  const showTicker = visibleTickerItems.length > 0 && availableViewportWidth > 260;
+  const showMissionCard = !!missionCard && !isPhoneViewport && availableViewportWidth > 420;
+  const activeIncidentCount = incidents.filter((incident) => incident.status === INCIDENT_STATUSES.ACTIVE).length;
+  const onlineReceiverCount = receivers.filter((receiver) => receiver.status === RECEIVER_STATUSES.ONLINE).length;
+
+  const navigateFromFeed = (target: FeedNavigationTarget) => {
+    setFeedFocusTarget({
+      ...target,
+      nonce: Date.now(),
+    });
+  };
+
   return (
     <div className="flex h-full w-full overflow-hidden relative">
       <ConnectionBanner />
+      <ToastContainer />
       
       <div className="flex-1 relative z-0">
-        <ToastContainer />
-
-        {opsTicker.length > 0 && (
+        {showTicker && (
           <div
-            className="pointer-events-none absolute top-4 z-[1000]"
-            style={{
-              left: `${leftViewportInset + 16}px`,
-              right: `${rightViewportInset + 16}px`,
-            }}
+            className="pointer-events-none absolute top-6 left-1/2 -translate-x-1/2 z-[1000] w-fit max-w-[60%]"
           >
-            <div className="overflow-hidden rounded-sm border border-[#1f1f1f] bg-[#070707]/88 px-3 py-2 shadow-[0_0_20px_rgba(249,115,22,0.08)] backdrop-blur-sm">
-              <div className="flex items-center gap-3 overflow-hidden whitespace-nowrap text-[9px] font-mono uppercase tracking-[0.18em] text-zinc-300">
-                {opsTicker.map((item, index) => (
+            <div className="overflow-hidden rounded-sm border border-[#1f1f1f] bg-[#070707]/88 px-4 py-2 shadow-[0_0_20px_rgba(249,115,22,0.12)] backdrop-blur-md">
+              <div className="flex items-center gap-4 overflow-hidden whitespace-nowrap text-[9px] font-mono uppercase tracking-[0.2em] text-zinc-300">
+                {visibleTickerItems.map((item, index) => (
                   <React.Fragment key={item}>
-                    {index > 0 && <span className="text-[#444]">///</span>}
+                    {index > 0 && <span className="text-[#333]">/</span>}
                     <span className={index === 0 ? "text-[#f97316]" : ""}>{item}</span>
                   </React.Fragment>
                 ))}
@@ -233,84 +257,77 @@ export function OperationsDashboardView() {
 
         <div
           className="pointer-events-none absolute bottom-6 z-[1000]"
-          style={{ left: "24px", maxWidth: `calc(100vw - ${rightViewportInset + 72}px)` }}
+          style={{ left: "24px" }}
         >
           <div
             className={`pointer-events-auto relative transition-[width] duration-200 ${
-              leftHudCollapsed ? "w-14" : "w-[min(52vw,680px)]"
+              effectiveLeftHudCollapsed ? "w-14" : "w-fit"
             }`}
-            style={{
-              maxWidth: leftHudCollapsed ? "56px" : `calc(100vw - ${rightViewportInset + 96}px)`,
-            }}
           >
             <button
               type="button"
               onClick={() => setLeftHudCollapsed((value) => !value)}
               className="absolute left-3 top-3 z-20 flex h-9 w-9 items-center justify-center border border-[#1f1f1f] bg-[#111] text-zinc-300 transition-colors hover:bg-[#171717] hover:text-white"
-              title={leftHudCollapsed ? "Expand left HUD" : "Collapse left HUD"}
+              title={effectiveLeftHudCollapsed ? "Expand left HUD" : "Collapse left HUD"}
             >
-              {leftHudCollapsed ? <PanelRightOpen className="h-4 w-4 rotate-180" /> : <PanelRightClose className="h-4 w-4 rotate-180" />}
+              {effectiveLeftHudCollapsed ? <PanelRightOpen className="h-4 w-4 rotate-180" /> : <PanelRightClose className="h-4 w-4 rotate-180" />}
             </button>
 
-            {leftHudCollapsed ? (
-              <div className="flex min-h-[220px] flex-col items-center rounded-sm border border-[#1f1f1f] bg-[#070707]/84 px-2 pt-16 backdrop-blur-sm">
-                <div className="text-[9px] font-mono uppercase tracking-[0.18em] text-[#22c55e]">HUD</div>
-                <div className="mt-4 text-[10px] font-mono uppercase tracking-[0.2em] text-zinc-400">
-                  {incidents.filter(i => i.status === INCIDENT_STATUSES.ACTIVE).length}
+            {effectiveLeftHudCollapsed ? (
+              <div className="flex min-h-[132px] flex-col items-center rounded-sm border border-[#1f1f1f] bg-[#070707]/84 px-2 pt-16 backdrop-blur-sm">
+                <div className="text-[10px] font-mono uppercase tracking-[0.2em] text-zinc-300">
+                  {activeIncidentCount}
                 </div>
-                <div className="mt-2 text-[9px] font-mono uppercase tracking-[0.18em] text-[#666]">
+                <div className="mt-2 text-[8px] font-mono uppercase tracking-[0.18em] text-[#666]">
                   Active
+                </div>
+                <div className="mt-4 text-[10px] font-mono uppercase tracking-[0.2em] text-zinc-300">
+                  {events.length}
+                </div>
+                <div className="mt-2 text-[8px] font-mono uppercase tracking-[0.18em] text-[#666]">
+                  Feed
                 </div>
               </div>
             ) : (
-              <div className="flex max-w-[min(52vw,680px)] flex-col gap-3">
-                <div className="rounded-sm border border-[#1f1f1f] bg-[#070707]/84 px-3 py-3 backdrop-blur-sm">
-                  <div className="flex items-center gap-3 pl-12">
-                    <h1 className="text-lg font-sans font-medium text-zinc-100 tracking-[0.18em] uppercase drop-shadow-md">
-                      Autonomous Recon Unit
-                    </h1>
-                    <button
-                      onClick={async () => {
-                        try {
-                          await fetch('/api/demo/incident', { method: 'POST' });
-                        } catch (e) {
-                          console.error('Failed to generate demo incident:', e);
-                        }
-                      }}
-                      className="border border-[#333] bg-[#111] px-2.5 py-1 text-[9px] font-mono uppercase tracking-[0.18em] text-[#f97316] transition-colors hover:border-[#f97316]"
-                    >
-                      + DEMO INCIDENT
-                    </button>
-                  </div>
-                  <div className="mt-2 flex items-center gap-2 pl-12">
-                    <span className="text-[9px] font-mono uppercase tracking-[0.18em] text-[#666]">/MODE SURVEILLANCE</span>
-                  </div>
-                  <div className="mt-2 inline-flex items-center gap-2 border border-[#1f1f1f] bg-[#111] px-2 py-1 ml-12">
-                    <span className="w-1.5 h-1.5 bg-[#22c55e] block"></span>
-                    <span className="font-mono text-[10px] uppercase tracking-widest text-[#22c55e]">ACTIVE</span>
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 pl-14 pr-4 py-3 rounded-sm border border-[#1f1f1f] bg-[#070707]/84 backdrop-blur-sm">
+                <button
+                  onClick={async () => {
+                    try {
+                      await fetch('/api/demo/incident', { method: 'POST' });
+                    } catch (e) {
+                      console.error('Failed to generate demo incident:', e);
+                    }
+                  }}
+                  className="col-span-full mb-1 rounded-sm border border-[#333] bg-[#111] px-3 py-1.5 text-[9px] font-mono uppercase tracking-[0.18em] text-[#f97316] transition-colors hover:border-[#f97316] hover:bg-[#1a110a]"
+                >
+                  + Generate Demo Incident
+                </button>
+                <div className="rounded-sm border border-[#1f1f1f]/50 bg-black/40 px-2.5 py-1.5">
+                  <div className="text-[8px] font-mono uppercase tracking-[0.18em] text-[#666]">Mode</div>
+                  <div className="mt-0.5 text-[11px] font-mono uppercase text-[#22c55e]">Active</div>
+                </div>
+                <div className="rounded-sm border border-[#1f1f1f]/50 bg-black/40 px-2.5 py-1.5">
+                  <div className="text-[8px] font-mono uppercase tracking-[0.18em] text-[#666]">Active</div>
+                  <div className="mt-0.5 text-sm font-mono text-[#f97316]">
+                    {activeIncidentCount}
                   </div>
                 </div>
-                
-                <div className="flex flex-wrap gap-2">
-                  <div className="rounded-sm border border-[#1f1f1f] bg-[#070707]/84 px-3 py-2 backdrop-blur-sm">
-                    <div className="text-[9px] font-mono uppercase tracking-[0.18em] text-[#666]">ACTIVE INCIDENTS</div>
-                    <div className="mt-1 text-xl font-mono text-[#f97316]">
-                      {incidents.filter(i => i.status === INCIDENT_STATUSES.ACTIVE).length}
-                    </div>
+                <div className="rounded-sm border border-[#1f1f1f]/50 bg-black/40 px-2.5 py-1.5">
+                  <div className="text-[8px] font-mono uppercase tracking-[0.18em] text-[#666]">Assets</div>
+                  <div className="mt-0.5 text-sm font-mono text-purple-500">
+                    {vessels.length}
                   </div>
-                  
-                  <div className="rounded-sm border border-[#1f1f1f] bg-[#070707]/84 px-3 py-2 backdrop-blur-sm">
-                    <div className="text-[9px] font-mono uppercase tracking-[0.18em] text-[#666]">LIVE VESSELS</div>
-                    <div className="mt-1 text-xl font-mono text-purple-500">
-                      {vessels.length}
-                    </div>
+                </div>
+                <div className="rounded-sm border border-[#1f1f1f]/50 bg-black/40 px-2.5 py-1.5">
+                  <div className="text-[8px] font-mono uppercase tracking-[0.18em] text-[#666]">Online</div>
+                  <div className="mt-0.5 text-sm font-mono text-[#22c55e]">
+                    {onlineReceiverCount}
                   </div>
-                  
-                  <div className="rounded-sm border border-[#1f1f1f] bg-[#070707]/84 px-3 py-2 backdrop-blur-sm">
-                    <div className="text-[9px] font-mono uppercase tracking-[0.18em] text-[#666]">RECEIVERS ONLINE</div>
-                    <div className="mt-1 text-xl font-mono text-[#22c55e]">
-                      {receivers.filter(r => r.status === RECEIVER_STATUSES.ONLINE).length} <span className="text-xs text-[#666]">/ {receivers.length}</span>
-                    </div>
+                </div>
+                <div className="rounded-sm border border-[#1f1f1f]/50 bg-black/40 px-2.5 py-1.5">
+                  <div className="text-[8px] font-mono uppercase tracking-[0.18em] text-[#666]">Feed</div>
+                  <div className="mt-0.5 text-sm font-mono text-zinc-200">
+                    {events.length}
                   </div>
                 </div>
               </div>
@@ -318,15 +335,11 @@ export function OperationsDashboardView() {
           </div>
         </div>
 
-        {missionCard && (
+        {showMissionCard && (
           <div
-            className="pointer-events-none absolute bottom-6 z-[1000]"
-            style={{
-              right: `${rightViewportInset + 24}px`,
-              maxWidth: `min(320px, calc(100vw - ${leftViewportInset + rightViewportInset + 96}px))`,
-            }}
+            className="pointer-events-none absolute bottom-6 right-6 z-[1000] w-80"
           >
-            <div className="max-w-full rounded-sm border border-[#2a2a2a] bg-[#050505]/84 shadow-[0_0_28px_rgba(249,115,22,0.1)] backdrop-blur-sm">
+            <div className="pointer-events-auto rounded-sm border border-[#2a2a2a] bg-[#050505]/84 shadow-[0_0_28px_rgba(249,115,22,0.1)] backdrop-blur-sm">
               <div className="border-b border-[#2a2a2a] bg-gradient-to-r from-[#2a1208] to-[#090909] px-3 py-2">
                 <div className="text-[9px] font-mono uppercase tracking-[0.22em] text-[#f97316]">
                   Mission Brief
@@ -337,7 +350,7 @@ export function OperationsDashboardView() {
                       {missionCard.status}
                     </div>
                     <div className="mt-1 text-[9px] font-mono uppercase tracking-[0.16em] text-zinc-400">
-                      NEXT ACTION // {missionCard.nextAction}
+                      ACTION // {missionCard.nextAction}
                     </div>
                   </div>
                   <div className="rounded-full border border-[#f97316]/40 bg-[#120b07] px-2.5 py-1 text-[9px] font-mono uppercase tracking-[0.18em] text-[#f97316]">
@@ -351,16 +364,8 @@ export function OperationsDashboardView() {
                   <div className="mt-1 text-sm font-mono text-zinc-100">{missionCard.confidence}</div>
                 </div>
                 <div className="bg-[#080808] px-3 py-2">
-                  <div className="text-[8px] font-mono uppercase tracking-[0.16em] text-[#666]">Last Signal</div>
+                  <div className="text-[8px] font-mono uppercase tracking-[0.16em] text-[#666]">Last Sig</div>
                   <div className="mt-1 text-sm font-mono text-zinc-100">{missionCard.lastSignal}</div>
-                </div>
-                <div className="bg-[#080808] px-3 py-2">
-                  <div className="text-[8px] font-mono uppercase tracking-[0.16em] text-[#666]">Search Box</div>
-                  <div className="mt-1 text-sm font-mono text-zinc-100">{missionCard.searchArea}</div>
-                </div>
-                <div className="bg-[#080808] px-3 py-2">
-                  <div className="text-[8px] font-mono uppercase tracking-[0.16em] text-[#666]">Coverage</div>
-                  <div className="mt-1 text-sm font-mono text-zinc-100">{missionCard.coverage}</div>
                 </div>
               </div>
             </div>
@@ -379,10 +384,11 @@ export function OperationsDashboardView() {
           interceptRoutes={sarIntel?.interceptGeoJson ?? null}
           primaryAssetId={sarIntel?.recommendations[0]?.asset.id ?? null}
           leftPanelOffsetPx={leftViewportInset}
-          rightPanelOffsetPx={rightViewportInset}
+          rightPanelOffsetPx={0}
+          focusTarget={feedFocusTarget}
           searchAreaLabel={
             sarIntel
-              ? `PROBABLE SEARCH AREA // ${Math.round(sarIntel.searchArea.areaKm2)} KM2 // ${sarIntel.searchArea.searchWindowHours} HR WINDOW`
+              ? `PROBABLE SEARCH AREA // ${Math.round(sarIntel.searchArea.areaKm2)} KM2`
               : null
           }
           selectedIncidentId={selectedIncidentId}
@@ -396,19 +402,19 @@ export function OperationsDashboardView() {
       {/* Right Sidebar - Event Feed & Drawer */}
       <div
         className={`relative z-10 border-l border-[#1f1f1f] bg-[#0a0a0a] transition-[width] duration-200 ${
-          sidebarCollapsed ? "w-14" : "w-80 md:w-96"
+          effectiveSidebarCollapsed ? "w-14" : "w-80 md:w-96"
         }`}
       >
         <button
           type="button"
           onClick={() => setSidebarCollapsed((value) => !value)}
           className="absolute left-1/2 top-4 z-20 flex h-9 w-9 -translate-x-1/2 items-center justify-center border border-[#1f1f1f] bg-[#111] text-zinc-300 transition-colors hover:bg-[#171717] hover:text-white"
-          title={sidebarCollapsed ? "Expand sidebar (Ctrl/Cmd+B)" : "Collapse sidebar (Ctrl/Cmd+B)"}
+          title={effectiveSidebarCollapsed ? "Expand sidebar (Ctrl/Cmd+B)" : "Collapse sidebar (Ctrl/Cmd+B)"}
         >
-          {sidebarCollapsed ? <PanelRightOpen className="h-4 w-4" /> : <PanelRightClose className="h-4 w-4" />}
+          {effectiveSidebarCollapsed ? <PanelRightOpen className="h-4 w-4" /> : <PanelRightClose className="h-4 w-4" />}
         </button>
 
-        {sidebarCollapsed ? (
+        {effectiveSidebarCollapsed ? (
           <div
             className="flex h-full flex-col items-center pt-16"
             onMouseEnter={() => setShowCollapsedPreview(true)}
@@ -479,6 +485,7 @@ export function OperationsDashboardView() {
                   setAutoSelectEnabled(false);
                   setSelectedIncidentId(id);
                 }}
+                onNavigate={navigateFromFeed}
               />
             </div>
             {selectedIncident && (
