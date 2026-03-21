@@ -4,6 +4,7 @@ import { calculateConfidence } from './confidenceEngine';
 import { determineStatus, isTransitionAllowed } from './incidentStateMachine';
 import { INCIDENT_STATUSES, INCIDENT_SEVERITIES, IncidentStatus } from '../../../shared/constants/statuses';
 import { incidentTransitionsService } from './incidentTransitionsService';
+import { notificationService } from '../notifications/notificationService';
 
 export interface NormalizedDetection {
   beaconId: string;
@@ -94,17 +95,30 @@ export class IncidentService {
     // 3. Update incident confidence and position
     const stats = signalEventsRepo.getIncidentStats(incidentId);
 
+    // Multi-receiver signal correlation: query recent detections across all receivers
+    const recentReceivers = signalEventsRepo.getRecentReceiversByBeaconId(detection.beaconId, 5);
+    const receiverCount = recentReceivers.length;
+
+    // Calculate base confidence from detection stats
     const newConfidence = calculateConfidence({
       receiverCount: stats.receiverCount,
       detectionCount: stats.detectionCount,
       avgSignalStrength: stats.avgSignalStrength,
       domainType: detection.domainType
     });
+    
+    // If 2+ receivers detected this beacon, boost confidence by 0.1 per additional receiver (cap at 1.0)
+    let confidenceBoost = 0;
+    if (receiverCount >= 2) {
+      confidenceBoost = Math.min((receiverCount - 1) * 0.1, 1.0 - newConfidence);
+    }
+
+    const boostedConfidence = Math.min(newConfidence + confidenceBoost, 1.0);
 
     const currentIncident = incidentsRepo.getById(incidentId);
     let newStatus = currentIncident.status as IncidentStatus;
     
-    const proposedStatus = determineStatus(currentIncident.status as IncidentStatus, newConfidence, detection.isTest);
+    const proposedStatus = determineStatus(currentIncident.status as IncidentStatus, boostedConfidence, detection.isTest);
     
     if (isTransitionAllowed(currentIncident.status as IncidentStatus, proposedStatus)) {
       newStatus = proposedStatus;
@@ -114,9 +128,19 @@ export class IncidentService {
           incidentId,
           currentIncident.status as string,
           newStatus,
-          newConfidence,
+          boostedConfidence,
           eventId
         );
+
+        // Trigger notification when incident reaches HIGH_CONFIDENCE
+        if (newStatus === INCIDENT_STATUSES.HIGH_CONFIDENCE) {
+          // Pass currentIncident data - alertOnThreshold will validate status
+          notificationService.alertOnThreshold({
+            ...currentIncident,
+            status: newStatus,
+            confidence_score: boostedConfidence
+          });
+        }
       }
     }
 
@@ -124,8 +148,10 @@ export class IncidentService {
       last_seen_at: detection.detectedAt,
       estimated_lat: stats.avgLat,
       estimated_lng: stats.avgLng,
-      confidence_score: newConfidence,
-      status: newStatus
+      confidence_score: boostedConfidence,
+      status: newStatus,
+      confirmed_by_receiver_ids: JSON.stringify(recentReceivers),
+      receiver_count: receiverCount
     });
 
     const updatedIncident = incidentsRepo.getById(incidentId);

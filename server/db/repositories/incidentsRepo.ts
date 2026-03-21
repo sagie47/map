@@ -47,18 +47,22 @@ export class IncidentsRepo {
   }
 
   updateIncident(id: string, updates: any) {
-    db.prepare(`
-      UPDATE incidents 
-      SET last_seen_at = ?, estimated_lat = ?, estimated_lng = ?, confidence_score = ?, status = ?
-      WHERE id = ?
-    `).run(
-      updates.last_seen_at,
-      updates.estimated_lat,
-      updates.estimated_lng,
-      updates.confidence_score,
-      updates.status,
-      id
-    );
+    // Build dynamic query to handle optional fields
+    const fields = ['last_seen_at = ?', 'estimated_lat = ?', 'estimated_lng = ?', 'confidence_score = ?', 'status = ?'];
+    const values: any[] = [updates.last_seen_at, updates.estimated_lat, updates.estimated_lng, updates.confidence_score, updates.status];
+    
+    if (updates.confirmed_by_receiver_ids !== undefined) {
+      fields.push('confirmed_by_receiver_ids = ?');
+      values.push(updates.confirmed_by_receiver_ids);
+    }
+    if (updates.receiver_count !== undefined) {
+      fields.push('receiver_count = ?');
+      values.push(updates.receiver_count);
+    }
+    
+    values.push(id);
+    
+    db.prepare(`UPDATE incidents SET ${fields.join(', ')} WHERE id = ?`).run(...values);
   }
 
   resolveIncident(id: string, reason: string) {

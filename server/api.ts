@@ -8,6 +8,7 @@ import { toTimelineDto } from './api/dto/timelineDto';
 import { replayService } from './domain/replay/replayService';
 import { replayFrameBuilder } from './domain/replay/replayFrameBuilder';
 import { analyticsService } from './domain/analytics/analyticsService';
+import { notificationService } from './domain/notifications/notificationService';
 
 export function setupApi(app: Express) {
   app.get('/api/health', (req, res) => {
@@ -73,5 +74,24 @@ export function setupApi(app: Express) {
   app.get('/api/analytics/kpi', (req, res) => {
     const kpi = analyticsService.getKPISummary();
     res.json(kpi);
+  });
+
+  // Notification routes
+  app.get('/api/notifications', (req, res) => {
+    const limit = parseInt(req.query.limit as string) || 50;
+    const offset = parseInt(req.query.offset as string) || 0;
+    const notifications = notificationService.getNotifications(limit, offset);
+    res.json(notifications);
+  });
+
+  app.get('/api/notifications/unread-count', (req, res) => {
+    const { notificationRepo } = require('./domain/notifications/notificationRepo');
+    const count = notificationRepo.getUnreadCount();
+    res.json({ count });
+  });
+
+  app.post('/api/notifications/:id/read', (req, res) => {
+    notificationService.markAsRead(req.params.id);
+    res.json({ success: true });
   });
 }
