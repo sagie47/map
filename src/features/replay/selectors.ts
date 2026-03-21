@@ -1,19 +1,18 @@
-import { Incident } from "@shared/types/incidents";
-import { SignalEvent } from "@shared/types/events";
+import { ReplayFrameDto, ReplayResponseDto } from "@shared/types/replay";
 
-export function selectReplayedIncident(
-  incident: Incident | undefined,
-  events: SignalEvent[],
+export function selectFrameAtIndex(
+  frames: ReplayFrameDto[],
+  index: number
+): ReplayFrameDto | null {
+  if (!frames || frames.length === 0) return null;
+  return frames[Math.min(Math.max(0, index), frames.length - 1)] || null;
+}
+
+export function selectCurrentFrame(
+  replay: ReplayResponseDto | undefined,
+  frames: ReplayFrameDto[] | undefined,
   currentIndex: number
-): Incident | null {
-  const currentEvent = events[currentIndex];
-  if (!incident || !currentEvent) return null;
-
-  return {
-    ...incident,
-    estimatedLat: currentEvent.lat,
-    estimatedLng: currentEvent.lng,
-    confidenceScore: Math.min(0.99, 0.4 + currentIndex * 0.05),
-    lastSeenAt: currentEvent.detectedAt,
-  };
+): ReplayFrameDto | null {
+  if (!replay || !frames || frames.length === 0) return null;
+  return selectFrameAtIndex(frames, currentIndex);
 }

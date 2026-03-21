@@ -6,7 +6,17 @@ import { RECEIVER_STATUSES } from '../../shared/constants/statuses';
 const dbPath = path.join(process.cwd(), 'beaconscope.db');
 export const db = new Database(dbPath);
 
+function configureDatabase() {
+  db.pragma('journal_mode = WAL');
+  db.pragma('foreign_keys = ON');
+  db.pragma('busy_timeout = 5000');
+  if (process.env.RUNTIME_MODE === 'live') {
+    db.pragma('synchronous = NORMAL');
+  }
+}
+
 export function initDb() {
+  configureDatabase();
   const schema = fs.readFileSync(path.join(process.cwd(), 'server', 'schema.sql'), 'utf-8');
   db.exec(schema);
   

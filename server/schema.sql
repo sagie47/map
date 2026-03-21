@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS incidents (
   confidence_score REAL,
   severity TEXT,
   source_type TEXT,
+  source TEXT DEFAULT 'simulator',
   resolution_reason TEXT,
   FOREIGN KEY(beacon_id) REFERENCES beacons(id)
 );

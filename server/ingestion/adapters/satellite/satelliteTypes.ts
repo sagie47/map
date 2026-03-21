@@ -43,9 +43,12 @@ export interface SatellitePass {
   duration: number;
 }
 
+export type SatelliteProvider = 'n2yo' | 'space-track' | 'celestrak';
+
 export interface SatelliteConfig {
-  provider: 'n2yo' | 'space-track';
+  provider: SatelliteProvider;
   apiKey?: string;
   satelliteIds?: string[];
   pollingInterval?: number;
+  celestrakGroups?: string[];
 }

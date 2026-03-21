@@ -1,27 +1,33 @@
 import { useQuery } from '@tanstack/react-query';
-import { fetchReplayIncident, fetchReplayEvents } from './api';
-import { useState, useEffect } from 'react';
+import { fetchReplay, fetchReplayFrames } from './api';
+import { useState, useEffect, useMemo } from 'react';
+import { ReplayResponseDto, ReplayFrameDto } from '@shared/types/replay';
 
 export function useReplayData(id: string | undefined) {
-  const incidentQuery = useQuery({
-    queryKey: ['replay-incident', id],
-    queryFn: () => fetchReplayIncident(id!),
-    enabled: !!id,
-  });
-
-  const eventsQuery = useQuery({
-    queryKey: ['replay-events', id],
-    queryFn: () => fetchReplayEvents(id!),
+  const replayQuery = useQuery({
+    queryKey: ['replay', id],
+    queryFn: () => fetchReplay(id!),
     enabled: !!id,
   });
 
   return {
-    data: incidentQuery.data && eventsQuery.data ? {
-      incident: incidentQuery.data,
-      events: eventsQuery.data
-    } : undefined,
-    isLoading: incidentQuery.isLoading || eventsQuery.isLoading,
-    error: incidentQuery.error || eventsQuery.error,
+    data: replayQuery.data as ReplayResponseDto | undefined,
+    isLoading: replayQuery.isLoading,
+    error: replayQuery.error,
+  };
+}
+
+export function useReplayFrames(id: string | undefined) {
+  const framesQuery = useQuery({
+    queryKey: ['replay-frames', id],
+    queryFn: () => fetchReplayFrames(id!),
+    enabled: !!id,
+  });
+
+  return {
+    data: framesQuery.data as ReplayFrameDto[] | undefined,
+    isLoading: framesQuery.isLoading,
+    error: framesQuery.error,
   };
 }
 

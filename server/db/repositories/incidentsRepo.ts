@@ -16,6 +16,7 @@ export class IncidentsRepo {
       SELECT i.*, b.external_identifier, b.beacon_type, b.protocol
       FROM incidents i
       LEFT JOIN beacons b ON i.beacon_id = b.id
+      WHERE i.source != 'simulator'
       ORDER BY i.last_seen_at DESC
     `).all();
   }
@@ -29,8 +30,8 @@ export class IncidentsRepo {
 
   createIncident(incident: any) {
     db.prepare(`
-      INSERT INTO incidents (id, beacon_id, status, domain_type, first_seen_at, last_seen_at, estimated_lat, estimated_lng, confidence_score, severity, source_type)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO incidents (id, beacon_id, status, domain_type, first_seen_at, last_seen_at, estimated_lat, estimated_lng, confidence_score, severity, source_type, source)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       incident.id,
       incident.beacon_id,
@@ -42,7 +43,8 @@ export class IncidentsRepo {
       incident.estimated_lng,
       incident.confidence_score,
       incident.severity,
-      incident.source_type
+      incident.source_type,
+      incident.source || 'simulator'
     );
   }
 

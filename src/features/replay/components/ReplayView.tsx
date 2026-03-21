@@ -3,18 +3,21 @@ import { useParams, useNavigate } from "react-router";
 import { MapView } from "../../../components/MapView";
 import { Play, Pause, SkipBack, ArrowLeft, Radio } from "lucide-react";
 import { format } from "date-fns";
-import { useReplayData, useReplayPlayback } from "../hooks";
-import { selectReplayedIncident } from "../selectors";
+import { useReplayData, useReplayFrames, useReplayPlayback } from "../hooks";
 import { useReceivers } from "../../receivers/hooks";
+import { Incident } from "@shared/types/incidents";
+import { DomainType } from "@shared/types/domain";
+import { IncidentStatus, IncidentSeverity } from "@shared/constants/statuses";
 
 export function ReplayView() {
   const { id } = useParams();
   const navigate = useNavigate();
   
-  const { data, isLoading, error } = useReplayData(id!);
+  const { data: replay, isLoading: replayLoading, error: replayError } = useReplayData(id);
+  const { data: frames, isLoading: framesLoading } = useReplayFrames(id);
   const { data: receivers = [] } = useReceivers();
   
-  const { isPlaying, togglePlayback, currentIndex, seekTo } = useReplayPlayback(data?.events || []);
+  const { isPlaying, togglePlayback, currentIndex, seekTo } = useReplayPlayback(replay?.events || []);
   
   const activeEventRef = useRef<HTMLDivElement>(null);
 
@@ -24,6 +27,7 @@ export function ReplayView() {
     }
   }, [currentIndex]);
 
+  const error = replayError;
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center h-full w-full bg-black text-[#666]">
@@ -39,12 +43,13 @@ export function ReplayView() {
     );
   }
 
-  if (isLoading || !data || data.events.length === 0)
+  const isLoading = replayLoading || framesLoading;
+  if (isLoading || !replay || !frames || replay.events.length === 0)
     return <div className="p-8 hud-text-muted">/LOADING_REPLAY_DATA...</div>;
 
-  const { incident, events } = data;
+  const { incident, events } = replay;
   const currentEvent = events[currentIndex];
-  const replayedIncident = selectReplayedIncident(incident, events, currentIndex);
+  const currentFrame = frames[currentIndex];
 
   return (
     <div className="flex flex-col h-full w-full bg-black">
@@ -95,7 +100,15 @@ export function ReplayView() {
       <div className="flex-1 relative flex">
         <div className="flex-1 relative">
           <MapView
-            incidents={replayedIncident ? [replayedIncident] : []}
+            incidents={currentFrame ? [{
+              ...incident,
+              estimatedLat: currentFrame.estimatedLat,
+              estimatedLng: currentFrame.estimatedLng,
+              confidenceScore: currentFrame.confidenceScore,
+              status: currentFrame.incidentStatus as IncidentStatus,
+              domainType: incident.domainType as DomainType,
+              severity: incident.severity as IncidentSeverity,
+            }] as Incident[] : []}
             receivers={receivers}
             selectedIncidentId={incident.id}
             onSelectIncident={() => {}}

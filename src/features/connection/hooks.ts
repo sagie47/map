@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { socketClient } from './socketClient';
 import { useConnectionStore } from './store';
 
@@ -17,7 +17,15 @@ export function useSocketConnection() {
 }
 
 export function useSocketSubscription(handler: (type: string, payload: any) => void) {
+  const handlerRef = useRef(handler);
+
   useEffect(() => {
-    return socketClient.subscribe(handler);
+    handlerRef.current = handler;
   }, [handler]);
+
+  useEffect(() => {
+    return socketClient.subscribe((type, payload) => {
+      handlerRef.current(type, payload);
+    });
+  }, []);
 }

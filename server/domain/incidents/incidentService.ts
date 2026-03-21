@@ -64,7 +64,8 @@ export class IncidentService {
         estimated_lng: detection.lng,
         confidence_score: 0.4,
         severity: detection.isTest ? INCIDENT_SEVERITIES.LOW : INCIDENT_SEVERITIES.HIGH,
-        source_type: 'satellite'
+        source_type: 'satellite',
+        source: 'simulator'
       });
 
       incidentTransitionsService.recordInitialTransition(incidentId, initialStatus, 0.4);

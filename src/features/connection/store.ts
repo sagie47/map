@@ -12,6 +12,8 @@ interface ConnectionState {
 export const useConnectionStore = create<ConnectionState>((set) => ({
   status: 'disconnected',
   lastMessageAt: null,
-  setStatus: (status) => set({ status }),
-  setLastMessageAt: (timestamp) => set({ lastMessageAt: timestamp }),
+  setStatus: (status) =>
+    set((state) => (state.status === status ? state : { ...state, status })),
+  setLastMessageAt: (timestamp) =>
+    set((state) => (state.lastMessageAt === timestamp ? state : { ...state, lastMessageAt: timestamp })),
 }));

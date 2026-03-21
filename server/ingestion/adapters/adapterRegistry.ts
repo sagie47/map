@@ -1,4 +1,5 @@
 import { Adapter, AdapterConfig, AdapterHealth, AdapterEvents, NormalizedEvent } from './adapterInterface';
+import { subsystemLoggers } from '../../app/logger';
 
 export interface AdapterRegistryEntry {
   adapter: Adapter;
@@ -9,6 +10,7 @@ export interface AdapterRegistryEntry {
 class AdapterRegistry {
   private adapters: Map<string, AdapterRegistryEntry> = new Map();
   private globalEvents: AdapterEvents = {};
+  private logger = subsystemLoggers.adapter;
 
   register(name: string, adapter: Adapter, config: AdapterConfig, events: AdapterEvents = {}) {
     this.adapters.set(name, { adapter, config, events });
@@ -17,7 +19,9 @@ class AdapterRegistry {
   unregister(name: string) {
     const entry = this.adapters.get(name);
     if (entry) {
-      entry.adapter.stop();
+      void entry.adapter.stop().catch(error => {
+        this.logger.error('adapter_stop_failed', `Failed to stop adapter ${name} during unregister`, error as Error, { adapterName: name });
+      });
       this.adapters.delete(name);
     }
   }
@@ -47,19 +51,17 @@ class AdapterRegistry {
   }
 
   async startAll() {
-    console.log(`[Registry] startAll called, adapters registered:`, Array.from(this.adapters.keys()));
+    this.logger.info('adapter_start_all', 'Starting all enabled adapters', {
+      adapters: Array.from(this.adapters.keys())
+    });
     for (const [name, entry] of this.adapters) {
-      console.log(`[Registry] Checking adapter ${name}, enabled:`, entry.config.enabled);
       if (entry.config.enabled) {
         try {
-          console.log(`[Registry] Starting adapter ${name}`);
           await entry.adapter.start();
-          console.log(`[Registry] Started adapter ${name}`);
+          this.logger.info('adapter_started', `Adapter started: ${name}`, { adapterName: name });
         } catch (error) {
-          console.error(`Failed to start adapter ${name}:`, error);
+          this.logger.error('adapter_start_failed', `Failed to start adapter ${name}`, error as Error, { adapterName: name });
         }
-      } else {
-        console.log(`[Registry] Skipping disabled adapter ${name}`);
       }
     }
   }
@@ -69,7 +71,7 @@ class AdapterRegistry {
       try {
         await entry.adapter.stop();
       } catch (error) {
-        console.error(`Failed to stop adapter ${name}:`, error);
+        this.logger.error('adapter_stop_failed', `Failed to stop adapter ${name}`, error as Error, { adapterName: name });
       }
     }
   }

@@ -20,8 +20,13 @@ export class AISAdapter extends BaseAdapter {
   }
 
   protected async doStart(): Promise<void> {
-    const streamingUrl = this.config.streamingUrl;
+    let streamingUrl = this.config.streamingUrl;
     
+    // Default to AISStream.io if API key is provided but no URL
+    if (!streamingUrl && this.config.apiKey) {
+      streamingUrl = 'wss://stream.aisstream.io/v0/stream';
+    }
+
     if (!streamingUrl) {
       console.log(`[AIS] No streaming URL configured, running in simulator mode`);
       this.recordSuccess();
@@ -30,6 +35,7 @@ export class AISAdapter extends BaseAdapter {
 
     return new Promise((resolve, reject) => {
       try {
+        console.log(`[AIS] Connecting to ${streamingUrl}...`);
         this.ws = new WebSocket(streamingUrl);
 
         this.ws.on('open', () => {
@@ -37,8 +43,8 @@ export class AISAdapter extends BaseAdapter {
           this.recordSuccess();
           this.reconnectAttempts = 0;
           
-          if (this.config.boundingBox) {
-            this.subscribeToBoundingBox(this.config.boundingBox);
+          if (this.config.apiKey) {
+            this.subscribeToBoundingBox(this.config.boundingBox || { latMin: -90, latMax: 90, lngMin: -180, lngMax: 180 });
           }
           
           resolve();
@@ -46,8 +52,28 @@ export class AISAdapter extends BaseAdapter {
 
         this.ws.on('message', (data: WebSocket.Data) => {
           try {
-            const message = JSON.parse(data.toString()) as AISShipPosition;
-            this.handleMessage(message);
+            const rawMessage = JSON.parse(data.toString());
+            
+            // Handle AISStream.io wrapper format
+            if (rawMessage.MessageType === 'PositionReport' && rawMessage.Message?.PositionReport) {
+              const report = rawMessage.Message.PositionReport;
+              const meta = rawMessage.MetaData;
+              
+              const shipPosition: AISShipPosition = {
+                mmsi: meta.MMSI?.toString() || report.Mmsi?.toString(),
+                latitude: report.Latitude,
+                longitude: report.Longitude,
+                speedOverGround: report.Sog,
+                courseOverGround: report.Cog,
+                trueHeading: report.TrueHeading,
+                timestamp: meta.time_utc || new Date().toISOString(),
+                vesselName: meta.ShipName?.trim(),
+              };
+              this.handleMessage(shipPosition);
+            } else {
+              // Fallback to direct format
+              this.handleMessage(rawMessage as AISShipPosition);
+            }
           } catch (error) {
             console.error(`[AIS] Failed to parse message:`, error);
           }
@@ -95,10 +121,15 @@ export class AISAdapter extends BaseAdapter {
 
   private subscribeToBoundingBox(bbox: { latMin: number; latMax: number; lngMin: number; lngMax: number }) {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({
-        type: 'subscribe',
-        boundingBox: bbox
-      }));
+      // AISStream.io subscription format
+      const subscription = {
+        APIKey: this.config.apiKey,
+        BoundingBoxes: [[[bbox.latMin, bbox.lngMin], [bbox.latMax, bbox.lngMax]]],
+        FilterMessageTypes: ["PositionReport"]
+      };
+      
+      this.ws.send(JSON.stringify(subscription));
+      console.log(`[AIS] Sent subscription for bounding box`);
     }
   }
 

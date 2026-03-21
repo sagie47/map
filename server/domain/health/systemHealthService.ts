@@ -1,6 +1,7 @@
 import { systemHealthRepo, SystemHealthRecord, HealthStatus } from '../../db/repositories/systemHealthRepo';
 import { sourceHealthService } from '../../ingestion/adapters/sourceHealthService';
 import { subsystemLoggers } from '../../app/logger';
+import { db } from '../../db/client';
 
 function generateId() {
   return Math.random().toString(36).substring(2, 9);
@@ -62,8 +63,7 @@ export class SystemHealthService {
 
   private checkDatabaseHealth(): { name: string; status: HealthStatus; message: string | null; lastCheck: string } {
     try {
-      const { db } = require('../../db/client');
-      const result = db.prepare('SELECT 1').get();
+      db.prepare('SELECT 1').get();
       
       return {
         name: 'database',

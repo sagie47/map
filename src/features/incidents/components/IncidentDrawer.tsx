@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router";
 import {
   X,
@@ -9,12 +9,17 @@ import {
   Clock,
   Activity,
   Play,
+  Ban,
+  User,
+  MessageSquare,
 } from "lucide-react";
 import { Incident } from "@shared/types/incidents";
 import { formatDistanceToNow, format } from "date-fns";
 
 import { INCIDENT_STATUSES, INCIDENT_SEVERITIES } from "@shared/constants/statuses";
 import { useIncidentEvents } from "../hooks";
+import { updateIncident } from "../api";
+import { useNotificationStore } from "../../notifications/store";
 
 export function IncidentDrawer({
   incident,
@@ -24,7 +29,48 @@ export function IncidentDrawer({
   onClose: () => void;
 }) {
   const { data: events = [], isLoading: loading } = useIncidentEvents(incident.id);
+  const [notes, setNotes] = useState((incident as any).notes || "");
+  const [assignedTo, setAssignedTo] = useState((incident as any).assignedTo || "");
+  const [isUpdating, setIsUpdating] = useState(false);
   const navigate = useNavigate();
+  const addToast = useNotificationStore((s) => s.addToast);
+
+  const handleStatusChange = async (newStatus: string) => {
+    setIsUpdating(true);
+    try {
+      await updateIncident(incident.id, { status: newStatus });
+      addToast("Incident Updated", `Status changed to ${newStatus}`, "success");
+      onClose();
+    } catch (e) {
+      addToast("Update Failed", "Could not update incident", "error");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleSaveNotes = async () => {
+    setIsUpdating(true);
+    try {
+      await updateIncident(incident.id, { notes });
+      addToast("Notes Saved", "Incident notes have been updated", "success");
+    } catch (e) {
+      addToast("Save Failed", "Could not save notes", "error");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleAssign = async () => {
+    setIsUpdating(true);
+    try {
+      await updateIncident(incident.id, { assignedTo });
+      addToast("Operator Assigned", `Assigned to ${assignedTo || "unassigned"}`, "success");
+    } catch (e) {
+      addToast("Assignment Failed", "Could not assign operator", "error");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   return (
     <div className="flex flex-col h-full w-full">
@@ -149,6 +195,76 @@ export function IncidentDrawer({
               ))}
             </div>
           )}
+        </div>
+
+        {/* Action Buttons */}
+        <div className="border-t border-[#1f1f1f] pt-4 space-y-3">
+          <h3 className="hud-text-muted mb-3">ACTIONS</h3>
+          
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => handleStatusChange("resolved")}
+              disabled={isUpdating || incident.status === "resolved"}
+              className="flex items-center justify-center py-2 px-3 bg-[#22c55e]/10 hover:bg-[#22c55e]/20 border border-[#22c55e]/30 text-[#22c55e] text-[10px] font-mono uppercase tracking-widest transition-colors disabled:opacity-50"
+            >
+              <CheckCircle className="w-3 h-3 mr-1.5" />
+              RESOLVE
+            </button>
+            <button
+              onClick={() => handleStatusChange("dismissed")}
+              disabled={isUpdating || incident.status === "dismissed"}
+              className="flex items-center justify-center py-2 px-3 bg-[#666]/10 hover:bg-[#666]/20 border border-[#666]/30 text-[#999] text-[10px] font-mono uppercase tracking-widest transition-colors disabled:opacity-50"
+            >
+              <Ban className="w-3 h-3 mr-1.5" />
+              FALSE POSITIVE
+            </button>
+          </div>
+
+          {/* Assign Operator */}
+          <div>
+            <div className="flex items-center text-[#666] mb-2">
+              <User className="w-3 h-3 mr-1.5" />
+              <span className="text-[10px] font-mono uppercase tracking-widest">ASSIGN OPERATOR</span>
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={assignedTo}
+                onChange={(e) => setAssignedTo(e.target.value)}
+                placeholder="Operator name"
+                className="flex-1 bg-[#111] border border-[#1f1f1f] px-2 py-1.5 text-[11px] font-mono text-zinc-300 placeholder:text-[#444] focus:outline-none focus:border-[#333]"
+              />
+              <button
+                onClick={handleAssign}
+                disabled={isUpdating}
+                className="px-3 py-1.5 bg-[#111] hover:bg-[#1a1a1a] border border-[#1f1f1f] text-[10px] font-mono uppercase tracking-widest text-zinc-300 transition-colors disabled:opacity-50"
+              >
+                ASSIGN
+              </button>
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <div className="flex items-center text-[#666] mb-2">
+              <MessageSquare className="w-3 h-3 mr-1.5" />
+              <span className="text-[10px] font-mono uppercase tracking-widest">NOTES</span>
+            </div>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Add incident notes..."
+              rows={3}
+              className="w-full bg-[#111] border border-[#1f1f1f] px-2 py-1.5 text-[11px] font-mono text-zinc-300 placeholder:text-[#444] focus:outline-none focus:border-[#333] resize-none"
+            />
+            <button
+              onClick={handleSaveNotes}
+              disabled={isUpdating}
+              className="mt-2 w-full py-1.5 bg-[#111] hover:bg-[#1a1a1a] border border-[#1f1f1f] text-[10px] font-mono uppercase tracking-widest text-zinc-300 transition-colors disabled:opacity-50"
+            >
+              SAVE NOTES
+            </button>
+          </div>
         </div>
       </div>
     </div>

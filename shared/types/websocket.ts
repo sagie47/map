@@ -5,7 +5,11 @@ export const WEBSOCKET_EVENTS = {
   INCIDENT_RESOLVED: 'incident.resolved',
   RECEIVER_UPDATED: 'receiver.updated',
   EVENT_INGESTED: 'event.ingested',
+  POSITION_UPDATE: 'position.update',
   NOTIFICATION_RAISED: 'notification.raised',
+  ALERT_UPSERT: 'alert.upsert',
+  TRACK_APPEND: 'track.append',
+  ENTITY_REMOVE: 'entity.remove',
 } as const;
 
 export type WebSocketMessageType = typeof WEBSOCKET_EVENTS[keyof typeof WEBSOCKET_EVENTS];

@@ -4,14 +4,16 @@ import { eventIngestionService } from '../../domain/events/eventIngestionService
 import { mapAndBroadcast } from '../../realtime/wsMessages';
 import { createRandomScenario, Scenario } from './scenarioFactory';
 
+let heartbeatInterval: NodeJS.Timeout | null = null;
+let incidentInterval: NodeJS.Timeout | null = null;
+
 export function startSimulation() {
   console.log('Starting simulation engine...');
 
   // Simulate receiver heartbeats
-  setInterval(() => {
+  heartbeatInterval = setInterval(() => {
     const receivers = receiversRepo.listReceivers();
     receivers.forEach(receiver => {
-      // 95% chance to be online
       const isOnline = Math.random() > 0.05;
       const status = isOnline ? RECEIVER_STATUSES.ONLINE : RECEIVER_STATUSES.DEGRADED;
       
@@ -23,16 +25,30 @@ export function startSimulation() {
       
       mapAndBroadcast(events);
     });
-  }, 10000); // Every 10s
+  }, 10000);
 
   // Generate a new incident every 30-60 seconds
-  setInterval(() => {
-    if (Math.random() > 0.5) return; // 50% chance to skip
+  incidentInterval = setInterval(() => {
+    if (Math.random() > 0.5) return;
 
     const scenario = createRandomScenario();
     simulateDetections(scenario);
 
-  }, 15000); // Check every 15s
+  }, 15000);
+}
+
+export function stopSimulation() {
+  if (heartbeatInterval) clearInterval(heartbeatInterval);
+  if (incidentInterval) clearInterval(incidentInterval);
+  heartbeatInterval = null;
+  incidentInterval = null;
+  console.log('Simulation engine stopped');
+}
+
+export function triggerDemoIncident() {
+  const scenario = createRandomScenario();
+  simulateDetections(scenario);
+  return scenario;
 }
 
 function simulateDetections(scenario: Scenario) {
@@ -77,5 +93,5 @@ function simulateDetections(scenario: Scenario) {
     }
 
     count++;
-  }, 5000); // Every 5 seconds
+  }, 5000);
 }

@@ -16,6 +16,7 @@ export interface AdapterEvents {
   onPositionUpdate?: (update: NormalizedPositionUpdate) => void;
   onHeartbeat?: (heartbeat: NormalizedHeartbeat) => void;
   onCoverageEvent?: (event: NormalizedCoverageEvent) => void;
+  onAlert?: (alert: NormalizedAlert) => void;
   onSourceError?: (error: AdapterError) => void;
 }
 
@@ -79,6 +80,21 @@ export interface NormalizedRouteDeviation {
   timestamp: string;
 }
 
+export interface NormalizedAlert {
+  source: string;
+  alertId: string;
+  type: string;
+  severity: string;
+  certainty: string;
+  urgency: string;
+  headline: string;
+  description: string;
+  polygon?: number[][][]; // GeoJSON multi/polygon coordinates
+  coordinates?: [number, number]; // For point-based alerts (lng, lat)
+  timestamp: string;
+  expires: string;
+}
+
 export interface Adapter {
   sourceName: string;
   mode: AdapterMode;
@@ -99,4 +115,5 @@ export type NormalizedEvent =
   | NormalizedPositionUpdate 
   | NormalizedHeartbeat 
   | NormalizedCoverageEvent
-  | NormalizedRouteDeviation;
+  | NormalizedRouteDeviation
+  | NormalizedAlert;

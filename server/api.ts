@@ -10,10 +10,6 @@ import { replayFrameBuilder } from './domain/replay/replayFrameBuilder';
 import { analyticsService } from './domain/analytics/analyticsService';
 
 export function setupApi(app: Express) {
-  app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok' });
-  });
-
   app.get('/api/incidents', (req, res) => {
     const incidents = incidentsRepo.listWithFilters();
     res.json(incidents.map(toIncidentDto));
@@ -24,6 +20,32 @@ export function setupApi(app: Express) {
     
     if (!incident) return res.status(404).json({ error: 'Not found' });
     res.json(toIncidentDto(incident));
+  });
+
+  app.patch('/api/incidents/:id', (req, res) => {
+    const incident = incidentsRepo.getById(req.params.id);
+    if (!incident) return res.status(404).json({ error: 'Not found' });
+
+    const { status, notes, assignedTo } = req.body;
+    const updates: any = {};
+
+    if (status) {
+      updates.status = status;
+    }
+    if (notes !== undefined) {
+      updates.notes = notes;
+    }
+    if (assignedTo !== undefined) {
+      updates.assigned_to = assignedTo;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: 'No updates provided' });
+    }
+
+    incidentsRepo.updateIncident(req.params.id, updates);
+    const updated = incidentsRepo.getById(req.params.id);
+    res.json(toIncidentDto(updated));
   });
 
   app.get('/api/incidents/:id/events', (req, res) => {

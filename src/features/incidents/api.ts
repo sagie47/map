@@ -18,3 +18,13 @@ export async function fetchIncidentEvents(id: string): Promise<SignalEvent[]> {
   if (!response.ok) throw new Error('Failed to fetch incident events');
   return response.json();
 }
+
+export async function updateIncident(id: string, updates: { status?: string; notes?: string; assignedTo?: string }): Promise<Incident> {
+  const response = await fetch(`/api/incidents/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+  });
+  if (!response.ok) throw new Error('Failed to update incident');
+  return response.json();
+}
