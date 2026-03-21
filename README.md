@@ -58,6 +58,17 @@ graph TD
 
 3. Open `http://localhost:3000` in your browser.
 
+## Linear workflow
+
+This repo uses a Linear state policy to keep issue status aligned with PR lifecycle:
+
+- `Todo` → scoped but not started
+- `In Progress` → implementation underway on a working branch
+- `In Review` → PR is open and the Linear issue has a PR URL + branch comment
+- `Done` → PR merged and any needed verification captured
+
+See [`docs/linear-pr-traceability-workflow.md`](docs/linear-pr-traceability-workflow.md) for the full policy, Symphony auto-comment expectation, and the manual fallback checklist.
+
 ## Data Model
 
 - **Beacons**: Physical devices (EPIRB, ELT, PLB) that emit signals.
