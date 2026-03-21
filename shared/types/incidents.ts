@@ -17,4 +17,6 @@ export interface Incident {
   resolutionReason?: string;
   externalIdentifier?: string;
   beaconType?: string;
+  confirmedByReceiverIds: string[];
+  receiverCount: number;
 }

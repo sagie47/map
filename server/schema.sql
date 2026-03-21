@@ -21,6 +21,8 @@ CREATE TABLE IF NOT EXISTS incidents (
   severity TEXT,
   source_type TEXT,
   resolution_reason TEXT,
+  confirmed_by_receiver_ids TEXT,
+  receiver_count INTEGER DEFAULT 0,
   FOREIGN KEY(beacon_id) REFERENCES beacons(id)
 );
 
@@ -61,11 +63,13 @@ CREATE TABLE IF NOT EXISTS receiver_heartbeats (
 CREATE TABLE IF NOT EXISTS notifications (
   id TEXT PRIMARY KEY,
   incident_id TEXT,
-  notification_type TEXT,
-  destination TEXT,
+  notification_type TEXT NOT NULL,
+  destination TEXT NOT NULL,
   sent_at DATETIME,
-  status TEXT,
+  status TEXT DEFAULT 'pending',
   payload_json TEXT,
+  read_at DATETIME,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY(incident_id) REFERENCES incidents(id)
 );
 
@@ -81,6 +85,9 @@ CREATE TABLE IF NOT EXISTS incident_state_transitions (
   FOREIGN KEY(incident_id) REFERENCES incidents(id)
 );
 
+CREATE INDEX IF NOT EXISTS idx_notifications_incident_id ON notifications(incident_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_status ON notifications(status);
+CREATE INDEX IF NOT EXISTS idx_notifications_sent_at ON notifications(sent_at);
 CREATE INDEX IF NOT EXISTS idx_transitions_incident_id ON incident_state_transitions(incident_id);
 CREATE INDEX IF NOT EXISTS idx_transitions_incident_at ON incident_state_transitions(transitioned_at);
 

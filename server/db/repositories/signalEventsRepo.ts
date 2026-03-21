@@ -48,6 +48,25 @@ export class SignalEventsRepo {
       WHERE incident_id = ?
     `).get(incidentId) as any;
   }
+
+  /**
+   * Query recent signal events for a beacon across all its incidents within a time window.
+   * Returns unique receiver IDs that detected this beacon.
+   */
+  getRecentReceiversByBeaconId(beaconId: string, minutesBack: number = 5): string[] {
+    const cutoffTime = new Date(Date.now() - minutesBack * 60 * 1000).toISOString();
+    
+    const results = db.prepare(`
+      SELECT DISTINCT se.receiver_station_id
+      FROM signal_events se
+      INNER JOIN incidents i ON se.incident_id = i.id
+      WHERE i.beacon_id = ?
+        AND se.detected_at >= ?
+        AND se.event_type = 'detection'
+    `).all(beaconId, cutoffTime) as any[];
+    
+    return results.map(r => r.receiver_station_id);
+  }
 }
 
 export const signalEventsRepo = new SignalEventsRepo();
