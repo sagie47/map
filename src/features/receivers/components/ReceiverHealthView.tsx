@@ -16,10 +16,10 @@ export function ReceiverHealthView() {
   }
 
   return (
-    <div className="p-6 h-full overflow-y-auto bg-black">
+    <div className="p-4 md:p-6 h-full overflow-y-auto bg-black safe-area-inset">
       <div className="max-w-6xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-2xl font-sans font-medium text-zinc-100 tracking-widest uppercase">
+        <div className="mb-4 md:mb-6">
+          <h1 className="text-xl md:text-2xl font-sans font-medium text-zinc-100 tracking-widest uppercase">
             Receiver Infrastructure
           </h1>
           <div className="flex items-center gap-2 mt-1">
@@ -28,15 +28,15 @@ export function ReceiverHealthView() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
           {receivers.map((receiver) => (
             <div
               key={receiver.id}
-              className="hud-panel p-6"
+              className="hud-panel p-4 md:p-6"
             >
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="text-sm font-mono uppercase tracking-[0.15em] text-zinc-100">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-4">
+                <div className="min-w-0">
+                  <h3 className="text-sm font-mono uppercase tracking-[0.15em] text-zinc-100 truncate">
                     {receiver.stationName}
                   </h3>
                   <p className="text-[10px] font-mono text-[#666] mt-1">
@@ -46,30 +46,36 @@ export function ReceiverHealthView() {
                 <StatusBadge status={receiver.status} />
               </div>
 
-              <div className="space-y-3 mt-6">
-                <div className="flex items-center text-[11px] font-mono uppercase">
-                  <MapPin className="w-3 h-3 text-[#666] mr-3" />
-                  <span className="text-zinc-400 tracking-widest">{receiver.region}</span>
-                  <span className="text-[#666] ml-auto">
-                    {receiver.lat.toFixed(2)}, {receiver.lng.toFixed(2)}
+              <div className="space-y-2 md:space-y-3 mt-4 md:mt-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:text-[11px] font-mono uppercase text-[11px]">
+                  <div className="flex items-center">
+                    <MapPin className="w-3 h-3 text-[#666] mr-2 sm:mr-3 flex-shrink-0" />
+                    <span className="text-zinc-400 tracking-widest">LOCATION</span>
+                  </div>
+                  <span className="text-[#666] sm:ml-auto mt-1 sm:mt-0 truncate">
+                    {receiver.region} ({receiver.lat.toFixed(2)}, {receiver.lng.toFixed(2)})
                   </span>
                 </div>
 
-                <div className="flex items-center text-[11px] font-mono uppercase">
-                  <Clock className="w-3 h-3 text-[#666] mr-3" />
-                  <span className="text-zinc-400 tracking-widest">LAST_HEARTBEAT</span>
-                  <span className="text-[#666] ml-auto">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:text-[11px] font-mono uppercase text-[11px]">
+                  <div className="flex items-center">
+                    <Clock className="w-3 h-3 text-[#666] mr-2 sm:mr-3 flex-shrink-0" />
+                    <span className="text-zinc-400 tracking-widest">HEARTBEAT</span>
+                  </div>
+                  <span className="text-[#666] sm:ml-auto mt-1 sm:mt-0">
                     {formatDistanceToNow(new Date(receiver.lastHeartbeatAt), {
                       addSuffix: true,
                     })}
                   </span>
                 </div>
 
-                <div className="flex items-center text-[11px] font-mono uppercase">
-                  <Activity className="w-3 h-3 text-[#666] mr-3" />
-                  <span className="text-zinc-400 tracking-widest">PACKET_DELAY</span>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:text-[11px] font-mono uppercase text-[11px]">
+                  <div className="flex items-center">
+                    <Activity className="w-3 h-3 text-[#666] mr-2 sm:mr-3 flex-shrink-0" />
+                    <span className="text-zinc-400 tracking-widest">PACKET_DELAY</span>
+                  </div>
                   <span
-                    className={`ml-auto ${receiver.packetDelayMs > 100 ? "text-red-500" : "text-[#22c55e]"}`}
+                    className={`sm:ml-auto mt-1 sm:mt-0 ${receiver.packetDelayMs > 100 ? "text-red-500" : "text-[#22c55e]"}`}
                   >
                     {receiver.packetDelayMs} MS
                   </span>

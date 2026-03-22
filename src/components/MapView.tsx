@@ -67,18 +67,24 @@ function ZoomControls() {
     <div className="absolute bottom-20 right-4 z-[1000] flex flex-col gap-1">
       <button
         onClick={() => map.zoomIn()}
-        className="w-11 h-11 flex items-center justify-center bg-[#111] hover:bg-[#1a1a1a] border border-[#1f1f1f] text-zinc-300 hover:text-zinc-100 transition-colors"
+        className="w-12 h-12 min-w-[44px] min-h-[44px] flex items-center justify-center bg-[#111] hover:bg-[#1a1a1a] border border-[#1f1f1f] text-zinc-300 hover:text-zinc-100 transition-colors touch-friendly"
         aria-label="Zoom in"
       >
-        <span className="text-lg font-mono">+</span>
+        <span className="text-xl font-mono font-bold">+</span>
       </button>
       <button
         onClick={() => map.zoomOut()}
-        className="w-11 h-11 flex items-center justify-center bg-[#111] hover:bg-[#1a1a1a] border border-[#1f1f1f] text-zinc-300 hover:text-zinc-100 transition-colors"
+        className="w-12 h-12 min-w-[44px] min-h-[44px] flex items-center justify-center bg-[#111] hover:bg-[#1a1a1a] border border-[#1f1f1f] text-zinc-300 hover:text-zinc-100 transition-colors touch-friendly"
         aria-label="Zoom out"
-        style={{ marginTop: '-1px' }}
       >
-        <span className="text-lg font-mono">−</span>
+        <span className="text-xl font-mono font-bold">−</span>
+      </button>
+      <button
+        onClick={() => map.locate({ setView: true, maxZoom: 10 })}
+        className="w-12 h-12 min-w-[44px] min-h-[44px] flex items-center justify-center bg-[#111] hover:bg-[#1a1a1a] border border-[#1f1f1f] text-zinc-300 hover:text-zinc-100 transition-colors touch-friendly mt-1"
+        aria-label="My location"
+      >
+        <span className="text-sm font-mono">⊙</span>
       </button>
     </div>
   );
