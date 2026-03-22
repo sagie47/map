@@ -52,10 +52,8 @@ export function GlobeView({
   onSelectIncident: (id: string) => void;
 }) {
   const mapRef = useRef<MapRef>(null);
-  const [isCompactViewport, setIsCompactViewport] = useState(false);
-  const [isMapReady, setIsMapReady] = useState(false);
   const [style, setStyle] = useState<GlobeStyle>("dark");
-  const [projection, setProjection] = useState<GlobeProjection>("mercator");
+  const [projection, setProjection] = useState<GlobeProjection>("globe");
   const [showStyleMenu, setShowStyleMenu] = useState(false);
   const [popup, setPopup] = useState<
     | { type: "incident"; incident: Incident }
@@ -67,34 +65,9 @@ export function GlobeView({
     () => incidents.find((incident) => incident.id === selectedIncidentId) ?? null,
     [incidents, selectedIncidentId],
   );
-  const isMobileSafeMode = isCompactViewport && !isMapReady;
 
   useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    const mediaQuery = window.matchMedia("(max-width: 767px)");
-    const updateViewportMode = () => {
-      const isCompact = mediaQuery.matches;
-      setIsCompactViewport(isCompact);
-      setProjection((current) => {
-        if (isCompact && !isMapReady) {
-          return "mercator";
-        }
-
-        return current === "globe" ? current : "globe";
-      });
-    };
-
-    updateViewportMode();
-    mediaQuery.addEventListener("change", updateViewportMode);
-
-    return () => mediaQuery.removeEventListener("change", updateViewportMode);
-  }, [isMapReady]);
-
-  useEffect(() => {
-    if (!selectedIncident || !mapRef.current || !isMapReady) {
+    if (!selectedIncident || !mapRef.current) {
       return;
     }
 
@@ -105,13 +78,9 @@ export function GlobeView({
       duration: 1600,
       essential: true,
     });
-  }, [isMapReady, projection, selectedIncident]);
+  }, [projection, selectedIncident]);
 
   useEffect(() => {
-    if (!isMapReady) {
-      return;
-    }
-
     const map = mapRef.current?.getMap();
     if (!map) {
       return;
@@ -124,7 +93,7 @@ export function GlobeView({
       duration: 500,
       essential: true,
     });
-  }, [isMapReady, projection]);
+  }, [projection]);
 
   if (!MAPBOX_TOKEN) {
     return (
@@ -151,7 +120,7 @@ export function GlobeView({
           longitude: -122,
           latitude: 35,
           zoom: 1.55,
-          pitch: projection === "globe" ? 42 : 0,
+          pitch: 42,
           bearing: 0,
         }}
         projection={projection}
@@ -168,7 +137,6 @@ export function GlobeView({
         reuseMaps={true}
         style={{ width: "100%", height: "100%" }}
         attributionControl={false}
-        onLoad={() => setIsMapReady(true)}
         onClick={() => setPopup(null)}
       >
         <NavigationControl position="top-right" visualizePitch={true} showCompass={true} />
@@ -314,15 +282,8 @@ export function GlobeView({
       <div className="pointer-events-none absolute left-3 top-3 z-[1001] flex max-w-[calc(100%-6rem)] flex-col gap-2 sm:left-4 sm:top-4">
         <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-[#2a2a2a] bg-black/80 px-3 py-2 backdrop-blur-sm">
           <Globe className="h-4 w-4 text-[#f97316]" />
-          <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-100">
-            {projection === "globe" ? "3D globe" : "2D globe map"}
-          </span>
+          <span className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-100">3D globe</span>
         </div>
-        {isMobileSafeMode && (
-          <div className="pointer-events-auto rounded-full border border-[#2a2a2a] bg-black/80 px-3 py-2 text-[10px] font-mono uppercase tracking-[0.16em] text-zinc-300 backdrop-blur-sm">
-            Mobile safe mode
-          </div>
-        )}
       </div>
 
       <div className="pointer-events-none absolute bottom-4 left-1/2 z-[1001] w-[min(calc(100%-1rem),26rem)] -translate-x-1/2 sm:bottom-6">
@@ -330,11 +291,10 @@ export function GlobeView({
           <button
             type="button"
             onClick={() => setProjection((current) => (current === "globe" ? "mercator" : "globe"))}
-            disabled={isMobileSafeMode}
-            className="touch-target inline-flex items-center justify-center gap-2 rounded-xl border border-[#1f1f1f] bg-[#111] px-3 text-[10px] font-mono uppercase tracking-[0.16em] text-zinc-100 transition-colors hover:border-[#f97316] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-[#1f1f1f]"
+            className="touch-target inline-flex items-center justify-center gap-2 rounded-xl border border-[#1f1f1f] bg-[#111] px-3 text-[10px] font-mono uppercase tracking-[0.16em] text-zinc-100 transition-colors hover:border-[#f97316]"
           >
             <Compass className="h-4 w-4" />
-            {isMobileSafeMode ? "Mobile" : projection === "globe" ? "3D" : "2D"}
+            {projection === "globe" ? "3D" : "2D"}
           </button>
           <button
             type="button"
