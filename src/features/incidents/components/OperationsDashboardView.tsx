@@ -96,7 +96,20 @@ export function OperationsDashboardView() {
       </div>
 
       {/* Right Sidebar - Event Feed & Drawer */}
-      <div className="w-80 md:w-96 bg-[#0a0a0a] border-l border-[#1f1f1f] flex flex-col z-10">
+      {/* Mobile: Bottom drawer. Desktop: Right sidebar */}
+      <div className="fixed md:relative w-full md:w-80 lg:w-96 bg-[#0a0a0a] border-t md:border-l border-[#1f1f1f] flex flex-col z-10 transition-transform duration-300 md:translate-y-0"
+        style={{ 
+          height: selectedIncident ? '70vh' : '50vh',
+          maxHeight: '400px',
+          bottom: 0,
+          left: 0,
+          right: 0
+        }}>
+        {/* Drag handle for mobile */}
+        <div className="md:hidden flex justify-center pt-2 pb-1">
+          <div className="w-10 h-1 bg-[#333] rounded-full"></div>
+        </div>
+        
         {selectedIncident ? (
           <IncidentDrawer
             incident={selectedIncident}
