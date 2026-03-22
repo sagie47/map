@@ -384,7 +384,7 @@ export function OperationsDashboardView() {
           interceptRoutes={sarIntel?.interceptGeoJson ?? null}
           primaryAssetId={sarIntel?.recommendations[0]?.asset.id ?? null}
           leftPanelOffsetPx={leftViewportInset}
-          rightPanelOffsetPx={0}
+          rightPanelOffsetPx={rightViewportInset}
           focusTarget={feedFocusTarget}
           searchAreaLabel={
             sarIntel
