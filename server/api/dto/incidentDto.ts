@@ -1,6 +1,10 @@
 import { Incident } from '../../../shared/types/incidents';
 
 export function toIncidentDto(row: any): Incident {
+  const confirmedByReceiverIds = row.confirmed_by_receiver_ids
+    ? JSON.parse(row.confirmed_by_receiver_ids)
+    : [];
+
   return {
     id: row.id,
     beaconId: row.beacon_id,
@@ -17,5 +21,7 @@ export function toIncidentDto(row: any): Incident {
     resolutionReason: row.resolution_reason,
     externalIdentifier: row.external_identifier,
     beaconType: row.beacon_type,
+    confirmedByReceiverIds,
+    receiverCount: row.receiver_count ?? confirmedByReceiverIds.length,
   };
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -14,7 +14,6 @@ import { Incident } from "@shared/types/incidents";
 import { ReceiverStation } from "@shared/types/receivers";
 import { INCIDENT_STATUSES, RECEIVER_STATUSES, INCIDENT_SEVERITIES } from "@shared/constants/statuses";
 
-// Fix Leaflet icon issue
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl:
@@ -32,10 +31,10 @@ const createCustomIcon = (color: string) => {
   });
 };
 
-const activeIcon = createCustomIcon("#ef4444"); // red-500
-const resolvedIcon = createCustomIcon("#22c55e"); // green-500
-const testIcon = createCustomIcon("#f97316"); // orange-500
-const receiverIcon = createCustomIcon("#3b82f6"); // blue-500
+const activeIcon = createCustomIcon("#ef4444");
+const resolvedIcon = createCustomIcon("#22c55e");
+const testIcon = createCustomIcon("#f97316");
+const receiverIcon = createCustomIcon("#3b82f6");
 
 function MapUpdater({
   selectedIncidentId,
@@ -78,14 +77,14 @@ export function MapView({
       style={{ height: "100%", width: "100%", backgroundColor: "#000" }}
       zoomControl={false}
     >
-      <div className="absolute bottom-4 left-4 z-[1000] pointer-events-none">
-        <div className="hud-panel p-3 pointer-events-auto">
-          <h4 className="text-[10px] font-mono uppercase tracking-widest text-[#666] mb-2">/MAP_LEGEND</h4>
-          <div className="space-y-2 text-[10px] font-mono uppercase tracking-widest text-zinc-400">
-            <div className="flex items-center"><div className="w-2 h-2 bg-[#ef4444] border border-white mr-2 shadow-[0_0_8px_#ef4444]"></div> ACTIVE INCIDENT</div>
-            <div className="flex items-center"><div className="w-2 h-2 bg-[#22c55e] border border-white mr-2 shadow-[0_0_8px_#22c55e]"></div> RESOLVED</div>
-            <div className="flex items-center"><div className="w-2 h-2 bg-[#f97316] border border-white mr-2 shadow-[0_0_8px_#f97316]"></div> TEST BEACON</div>
-            <div className="flex items-center"><div className="w-2 h-2 bg-[#3b82f6] border border-white mr-2 shadow-[0_0_8px_#3b82f6]"></div> RECEIVER STATION</div>
+      <div className="pointer-events-none absolute bottom-3 left-3 z-[1000] right-3 sm:right-auto sm:bottom-4 sm:left-4">
+        <div className="hud-panel pointer-events-auto max-w-xs p-3 sm:max-w-none">
+          <h4 className="mb-2 text-[10px] font-mono uppercase tracking-widest text-[#666]">/MAP_LEGEND</h4>
+          <div className="grid grid-cols-1 gap-2 text-[10px] font-mono uppercase tracking-widest text-zinc-400 sm:space-y-0">
+            <div className="flex items-center"><div className="mr-2 h-2 w-2 shrink-0 border border-white bg-[#ef4444] shadow-[0_0_8px_#ef4444]"></div> ACTIVE INCIDENT</div>
+            <div className="flex items-center"><div className="mr-2 h-2 w-2 shrink-0 border border-white bg-[#22c55e] shadow-[0_0_8px_#22c55e]"></div> RESOLVED</div>
+            <div className="flex items-center"><div className="mr-2 h-2 w-2 shrink-0 border border-white bg-[#f97316] shadow-[0_0_8px_#f97316]"></div> TEST BEACON</div>
+            <div className="flex items-center"><div className="mr-2 h-2 w-2 shrink-0 border border-white bg-[#3b82f6] shadow-[0_0_8px_#3b82f6]"></div> RECEIVER STATION</div>
           </div>
         </div>
       </div>
@@ -117,9 +116,9 @@ export function MapView({
           icon={receiverIcon}
         >
           <Popup className="hud-popup">
-            <div className="p-2 bg-black border border-[#1f1f1f] text-zinc-100 font-mono">
-              <h3 className="text-[11px] uppercase tracking-widest">{receiver.stationName}</h3>
-              <p className="text-[10px] text-[#666] mt-1">
+            <div className="bg-black p-2 font-mono text-zinc-100 border border-[#1f1f1f]">
+              <h3 className="text-[11px] uppercase tracking-widest break-words">{receiver.stationName}</h3>
+              <p className="mt-1 text-[10px] text-[#666]">
                 CODE: {receiver.stationCode}
               </p>
               <p className="text-[10px] text-[#666]">
@@ -158,7 +157,7 @@ export function MapView({
             {isSelected && (
               <Circle
                 center={[incident.estimatedLat, incident.estimatedLng]}
-                radius={100000 * (1 - incident.confidenceScore)} // Uncertainty radius
+                radius={100000 * (1 - incident.confidenceScore)}
                 pathOptions={{
                   color: "#ef4444",
                   fillColor: "#ef4444",

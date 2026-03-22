@@ -10,28 +10,28 @@ import { useReceivers } from "../../receivers/hooks";
 export function ReplayView() {
   const { id } = useParams();
   const navigate = useNavigate();
-  
+
   const { data, isLoading, error } = useReplayData(id!);
   const { data: receivers = [] } = useReceivers();
-  
+
   const { isPlaying, togglePlayback, currentIndex, seekTo } = useReplayPlayback(data?.events || []);
-  
+
   const activeEventRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (activeEventRef.current) {
-      activeEventRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      activeEventRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }, [currentIndex]);
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-full w-full bg-black text-[#666]">
-        <div className="text-xl font-mono uppercase tracking-widest text-zinc-100 mb-2">/INCIDENT_NOT_FOUND</div>
+      <div className="flex h-full w-full flex-col items-center justify-center bg-black px-4 text-center text-[#666]">
+        <div className="mb-2 text-xl font-mono uppercase tracking-widest text-zinc-100">/INCIDENT_NOT_FOUND</div>
         <p className="mb-6 font-mono text-[11px] uppercase tracking-widest">The incident you are looking for does not exist or has been removed.</p>
-        <button 
-          onClick={() => navigate('/operations')}
-          className="px-4 py-2 bg-[#111] border border-[#1f1f1f] text-[11px] font-mono uppercase tracking-widest text-zinc-200 hover:bg-[#1a1a1a] transition-colors"
+        <button
+          onClick={() => navigate("/operations")}
+          className="border border-[#1f1f1f] bg-[#111] px-4 py-2 text-[11px] font-mono uppercase tracking-widest text-zinc-200 transition-colors hover:bg-[#1a1a1a]"
         >
           [RETURN TO OPERATIONS]
         </button>
@@ -39,79 +39,77 @@ export function ReplayView() {
     );
   }
 
-  if (isLoading || !data || data.events.length === 0)
-    return <div className="p-8 hud-text-muted">/LOADING_REPLAY_DATA...</div>;
+  if (isLoading || !data || data.events.length === 0) {
+    return <div className="p-6 sm:p-8 hud-text-muted">/LOADING_REPLAY_DATA...</div>;
+  }
 
   const { incident, events } = data;
   const currentEvent = events[currentIndex];
   const replayedIncident = selectReplayedIncident(incident, events, currentIndex);
 
   return (
-    <div className="flex flex-col h-full w-full bg-black">
-      {/* Top Bar */}
-      <div className="h-16 border-b border-[#1f1f1f] flex items-center px-6 justify-between bg-[#0a0a0a]">
-        <div className="flex items-center">
+    <div className="flex min-h-screen w-full flex-col bg-black md:h-screen">
+      <div className="flex min-h-16 flex-col gap-3 border-b border-[#1f1f1f] bg-[#0a0a0a] px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex min-w-0 items-center">
           <button
             onClick={() => navigate(-1)}
-            className="mr-4 text-[#666] hover:text-zinc-100 transition-colors"
+            className="mr-3 shrink-0 text-[#666] transition-colors hover:text-zinc-100 sm:mr-4"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="h-5 w-5" />
           </button>
-          <h1 className="text-lg font-mono uppercase tracking-[0.15em] text-zinc-100">
-            REPLAY // {incident.id}
-          </h1>
-          <span className="ml-4 px-2 py-0.5 text-[10px] font-mono uppercase tracking-widest border bg-[#111] text-[#3b82f6] border-[#1f1f1f]">
+          <div className="min-w-0">
+            <h1 className="truncate text-sm font-mono uppercase tracking-[0.15em] text-zinc-100 sm:text-lg">
+              REPLAY // {incident.id}
+            </h1>
+            <span className="mt-2 inline-flex border border-[#1f1f1f] bg-[#111] px-2 py-0.5 text-[10px] font-mono uppercase tracking-widest text-[#3b82f6] lg:hidden">
+              /MODE REPLAY
+            </span>
+          </div>
+          <span className="ml-4 hidden border border-[#1f1f1f] bg-[#111] px-2 py-0.5 text-[10px] font-mono uppercase tracking-widest text-[#3b82f6] lg:inline-flex">
             /MODE REPLAY
           </span>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="text-[11px] font-mono text-[#666] uppercase tracking-widest">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between lg:justify-end">
+          <div className="text-[11px] font-mono uppercase tracking-widest text-[#666] break-all">
             {format(new Date(currentEvent.detectedAt), "yyyy-MM-dd HH:mm:ss")}
           </div>
 
-          <div className="flex items-center bg-[#111] border border-[#1f1f1f] p-1">
+          <div className="flex w-fit items-center border border-[#1f1f1f] bg-[#111] p-1">
             <button
               onClick={() => seekTo(0)}
-              className="p-1.5 text-[#666] hover:text-zinc-100 transition-colors"
+              className="p-1.5 text-[#666] transition-colors hover:text-zinc-100"
             >
-              <SkipBack className="w-4 h-4" />
+              <SkipBack className="h-4 w-4" />
             </button>
             <button
               onClick={togglePlayback}
-              className="p-1.5 text-[#666] hover:text-zinc-100 transition-colors"
+              className="p-1.5 text-[#666] transition-colors hover:text-zinc-100"
             >
               {isPlaying ? (
-                <Pause className="w-4 h-4" />
+                <Pause className="h-4 w-4" />
               ) : (
-                <Play className="w-4 h-4" />
+                <Play className="h-4 w-4" />
               )}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 relative flex">
-        <div className="flex-1 relative">
+      <div className="relative flex flex-1 flex-col lg:flex-row">
+        <div className="relative min-h-[60vh] flex-1 lg:min-h-0">
           <MapView
             incidents={replayedIncident ? [replayedIncident] : []}
             receivers={receivers}
             selectedIncidentId={incident.id}
             onSelectIncident={() => {}}
           />
-  
-          {/* Progress Bar Overlay */}
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4 z-[1000]">
-            <div className="hud-panel p-4 shadow-2xl">
-              <div className="flex justify-between text-[10px] text-[#666] mb-2 font-mono uppercase tracking-widest">
+
+          <div className="absolute inset-x-3 bottom-3 z-[1000] sm:inset-x-4 sm:bottom-4 lg:left-1/2 lg:right-auto lg:w-full lg:max-w-2xl lg:-translate-x-1/2 lg:px-4">
+            <div className="hud-panel p-3 shadow-2xl sm:p-4">
+              <div className="mb-2 flex justify-between gap-3 text-[10px] font-mono uppercase tracking-widest text-[#666]">
                 <span>{format(new Date(events[0].detectedAt), "HH:mm:ss")}</span>
-                <span>
-                  {format(
-                    new Date(events[events.length - 1].detectedAt),
-                    "HH:mm:ss",
-                  )}
-                </span>
+                <span>{format(new Date(events[events.length - 1].detectedAt), "HH:mm:ss")}</span>
               </div>
               <input
                 type="range"
@@ -121,53 +119,52 @@ export function ReplayView() {
                 onChange={(e) => {
                   seekTo(parseInt(e.target.value));
                 }}
-                className="w-full h-1 bg-[#1f1f1f] appearance-none cursor-pointer accent-[#f97316]"
+                className="h-1 w-full cursor-pointer appearance-none bg-[#1f1f1f] accent-[#f97316]"
               />
-              <div className="mt-3 text-[11px] font-mono uppercase tracking-widest text-zinc-300 text-center">
+              <div className="mt-3 text-center text-[10px] font-mono uppercase tracking-widest text-zinc-300 sm:text-[11px]">
                 EVENT {currentIndex + 1} OF {events.length} // DETECTED BY{" "}
-                <span className="text-[#22c55e]">
+                <span className="break-all text-[#22c55e]">
                   {currentEvent.stationName || currentEvent.receiverStationId}
                 </span>
               </div>
             </div>
           </div>
         </div>
-        
-        {/* Right Sidebar - Event List */}
-        <div className="w-80 bg-[#0a0a0a] border-l border-[#1f1f1f] flex flex-col z-10 overflow-y-auto">
-          <div className="p-4 border-b border-[#1f1f1f]">
+
+        <div className="flex max-h-[40vh] w-full shrink-0 flex-col overflow-y-auto border-t border-[#1f1f1f] bg-[#0a0a0a] lg:max-h-none lg:w-80 lg:border-t-0 lg:border-l">
+          <div className="border-b border-[#1f1f1f] p-4">
             <h2 className="text-[11px] font-mono uppercase tracking-widest text-zinc-100">/DETECTION_TIMELINE</h2>
           </div>
-          <div className="p-4 space-y-3">
+          <div className="space-y-3 p-4">
             {events.map((event, idx) => {
               const isActive = idx === currentIndex;
               const isPast = idx < currentIndex;
-              
+
               return (
-                <div 
+                <div
                   key={event.id}
                   ref={isActive ? activeEventRef : null}
                   onClick={() => {
                     seekTo(idx);
                   }}
-                  className={`p-3 border cursor-pointer transition-colors ${
-                    isActive 
-                      ? 'bg-[#111] border-[#f97316]' 
-                      : isPast 
-                        ? 'bg-[#111] border-[#1f1f1f] hover:border-[#333]' 
-                        : 'bg-black border-[#1f1f1f] opacity-50 hover:opacity-100'
+                  className={`cursor-pointer border p-3 transition-colors ${
+                    isActive
+                      ? "border-[#f97316] bg-[#111]"
+                      : isPast
+                        ? "border-[#1f1f1f] bg-[#111] hover:border-[#333]"
+                        : "border-[#1f1f1f] bg-black opacity-50 hover:opacity-100"
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className={`text-[10px] font-mono uppercase tracking-widest ${isActive ? 'text-[#f97316]' : 'text-[#666]'}`}>
+                  <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                    <span className={`text-[10px] font-mono uppercase tracking-widest break-all ${isActive ? "text-[#f97316]" : "text-[#666]"}`}>
                       {event.eventType}
                     </span>
                     <span className="text-[10px] font-mono text-[#666]">
                       {format(new Date(event.detectedAt), "HH:mm:ss")}
                     </span>
                   </div>
-                  <div className="flex items-center text-[11px] font-mono uppercase tracking-widest text-zinc-300">
-                    <Radio className="w-3 h-3 mr-1.5 text-[#666]" />
+                  <div className="flex items-center break-all text-[11px] font-mono uppercase tracking-widest text-zinc-300">
+                    <Radio className="mr-1.5 h-3 w-3 shrink-0 text-[#666]" />
                     {event.stationName || event.receiverStationId}
                   </div>
                 </div>
