@@ -74,6 +74,8 @@ function buildSettingsFromEnv(): AdapterSettings {
     },
     opensky: {
       enabled: parseBoolean(process.env.OPENSKY_ENABLED, false),
+      clientId: process.env.OPENSKY_CLIENT_ID || '',
+      clientSecret: process.env.OPENSKY_CLIENT_SECRET || '',
       pollingInterval: parseNumber(process.env.OPENSKY_POLLING_INTERVAL, 60000, { min: 1000 }),
       boundingBox: buildBoundingBox('OPENSKY')
     },

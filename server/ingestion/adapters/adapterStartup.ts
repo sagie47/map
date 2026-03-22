@@ -181,6 +181,8 @@ export async function initializeAdapters() {
 
   if (config.opensky.enabled) {
     const openSkyAdapter = new OpenSkyAdapter({
+      clientId: config.opensky.clientId,
+      clientSecret: config.opensky.clientSecret,
       boundingBox: config.opensky.boundingBox,
       pollingInterval: config.opensky.pollingInterval
     });
