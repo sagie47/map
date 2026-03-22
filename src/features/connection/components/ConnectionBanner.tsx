@@ -8,9 +8,9 @@ export function ConnectionBanner() {
   if (status === 'connected') return null;
 
   return (
-    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] hud-panel border-red-500 text-red-500 px-4 py-2 flex items-center text-[11px] font-mono uppercase tracking-widest">
-      <WifiOff className="w-4 h-4 mr-2" />
-      /CONNECTION_LOST // RECONNECTING...
+    <div className="absolute top-0 left-0 w-full z-[2000] bg-red-900/20 border-b border-red-500/50 backdrop-blur-md text-red-500 px-4 py-1.5 flex items-center justify-center text-[10px] font-mono uppercase tracking-[0.2em] shadow-[0_2px_15px_rgba(239,68,68,0.15)]">
+      <WifiOff className="w-3.5 h-3.5 mr-2 animate-pulse" />
+      /CONNECTION_LOST // ATTEMPTING_RECOVERY // NO_STATION_SYNC
     </div>
   );
 }

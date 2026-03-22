@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{TITLE}}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #050506;
+            --surface: #0c0c0e;
+            --surface-2: #141417;
+            --border: #1f1f23;
+            --border-bright: #2d2d33;
+            --text: #ffffff;
+            --text-dim: #94a3b8;
+            --text-muted: #475569;
+            --accent: #22c55e;
+            --accent-glow: rgba(34, 197, 94, 0.2);
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        @page {
+            size: 8.5in 11in;
+            margin: 0;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            font-size: 10pt;
+            line-height: 1.5;
+            -webkit-print-color-adjust: exact;
+        }
+
+        .page {
+            width: 8.5in;
+            height: 11in;
+            page-break-after: always;
+            position: relative;
+            overflow: hidden;
+            background: var(--bg);
+        }
+
+        .bg-grid {
+            position: absolute;
+            inset: 0;
+            background-image: 
+                radial-gradient(circle at 2px 2px, var(--border) 1px, transparent 0);
+            background-size: 24px 24px;
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .cover {
+            display: flex;
+            flex-direction: column;
+            padding: 60px;
+            justify-content: space-between;
+        }
+
+        .cover-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 30px;
+        }
+
+        .brand-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .brand-logo {
+            width: 48px;
+            height: 48px;
+            background: var(--accent);
+            clip-path: polygon(25% 0%, 100% 0%, 75% 100%, 0% 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .brand-logo svg { width: 24px; height: 24px; fill: var(--bg); }
+
+        .brand-type {
+            font-family: 'Space Mono', monospace;
+            font-size: 9pt;
+            letter-spacing: 3px;
+            color: var(--accent);
+            text-transform: uppercase;
+        }
+
+        .cover-main {
+            margin-top: 40px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .report-label {
+            font-family: 'Space Mono', monospace;
+            font-size: 10pt;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .report-label::before {
+            content: '';
+            width: 30px;
+            height: 1px;
+            background: var(--text-muted);
+        }
+
+        .cover-title {
+            font-size: 56pt;
+            font-weight: 700;
+            line-height: 0.95;
+            letter-spacing: -3px;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+        }
+
+        .cover-title span {
+            color: transparent;
+            -webkit-text-stroke: 1px var(--text);
+        }
+
+        .url-badge {
+            font-family: 'Space Mono', monospace;
+            display: inline-block;
+            background: var(--surface);
+            border: 1px solid var(--border-bright);
+            padding: 8px 16px;
+            border-radius: 4px;
+            color: var(--text-dim);
+            font-size: 11pt;
+        }
+
+        .cover-footer {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            gap: 40px;
+            align-items: flex-end;
+            padding-top: 40px;
+            border-top: 1px solid var(--border);
+        }
+
+        .score-display {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+        }
+
+        .score-big {
+            font-size: 84pt;
+            font-weight: 700;
+            line-height: 1;
+            letter-spacing: -4px;
+            color: var(--accent);
+        }
+
+        .score-meta {
+            font-family: 'Space Mono', monospace;
+            font-size: 12pt;
+            color: var(--text-muted);
+        }
+
+        .quick-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .q-stat {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 9pt;
+            font-family: 'Space Mono', monospace;
+        }
+
+        .q-stat span:first-child { color: var(--text-muted); }
+        .q-stat .val { color: var(--text); font-weight: 700; }
+        .q-stat .val.danger { color: var(--danger); }
+        .q-stat .val.warning { color: var(--warning); }
+
+        .content {
+            padding: 60px;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .section-header {
+            margin-bottom: 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .section-title {
+            font-size: 32pt;
+            font-weight: 700;
+            letter-spacing: -1.5px;
+            text-transform: uppercase;
+        }
+
+        .section-subtitle {
+            color: var(--text-muted);
+            font-family: 'Space Mono', monospace;
+            font-size: 9pt;
+            margin-top: 5px;
+        }
+
+        .category-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .cat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 24px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .cat-info h3 {
+            font-size: 14pt;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .cat-info p {
+            font-size: 8pt;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .cat-score {
+            font-size: 24pt;
+            font-weight: 700;
+            font-family: 'Space Mono', monospace;
+        }
+
+        .cat-score.excellent { color: var(--accent); }
+        .cat-score.average { color: var(--warning); }
+        .cat-score.poor { color: var(--danger); }
+
+        .issue-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .issue-item {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--danger);
+            padding: 20px;
+            border-radius: 4px;
+        }
+
+        .issue-item.warning { border-left-color: var(--warning); }
+
+        .issue-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .issue-code {
+            font-family: 'Space Mono', monospace;
+            font-size: 8pt;
+            color: var(--text-muted);
+            background: var(--bg);
+            padding: 2px 8px;
+            border-radius: 2px;
+        }
+
+        .issue-title {
+            font-size: 12pt;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .issue-desc {
+            font-size: 9pt;
+            color: var(--text-dim);
+            margin-bottom: 12px;
+        }
+
+        .issue-action {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--accent);
+            font-size: 8.5pt;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .page-footer {
+            position: absolute;
+            bottom: 40px;
+            left: 60px;
+            right: 60px;
+            display: flex;
+            justify-content: space-between;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+            font-family: 'Space Mono', monospace;
+            font-size: 7.5pt;
+            color: var(--text-muted);
+        }
+
+        .final-page {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 80px;
+        }
+
+        .final-score-ring {
+            width: 240px;
+            height: 240px;
+            border: 2px solid var(--border);
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 40px;
+            position: relative;
+        }
+
+        .final-score-ring::after {
+            content: '';
+            position: absolute;
+            inset: -10px;
+            border: 1px solid var(--accent);
+            border-radius: 50%;
+            opacity: 0.2;
+        }
+
+        .final-val {
+            font-size: 80pt;
+            font-weight: 700;
+            color: var(--accent);
+            line-height: 1;
+        }
+
+        .final-grade {
+            font-size: 18pt;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 4px;
+        }
+
+        .conclusion-box {
+            max-width: 500px;
+            font-size: 11pt;
+            color: var(--text-dim);
+            line-height: 1.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="page cover">
+        <div class="bg-grid"></div>
+        <div class="cover-header">
+            <div class="brand-container">
+                <div class="brand-logo">
+                    <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                </div>
+                <div>
+                    <div class="brand-type">SYSTEM AUDIT</div>
+                    <div style="font-weight: 700; font-size: 14pt;">{{REPORT_TYPE}}</div>
+                </div>
+            </div>
+            <div style="text-align: right;">
+                <div class="brand-type">VERSION</div>
+                <div style="font-weight: 700;">1.0.4-STABLE</div>
+            </div>
+        </div>
+        <div class="cover-main">
+            <div class="report-label">ANALYTICS REPORT</div>
+            <h1 class="cover-title">{{TITLE}}<br><span>OVERVIEW</span></h1>
+            <div><div class="url-badge">{{URL}}</div></div>
+        </div>
+        <div class="cover-footer">
+            <div class="score-display">
+                <div class="score-big">{{SCORE}}</div>
+                <div class="score-meta">/ 100 INDEX</div>
+            </div>
+            <div class="quick-stats">
+                <div class="q-stat"><span>STATION DATE</span> <span class="val">{{DATE}}</span></div>
+                <div class="q-stat"><span>CRITICAL ERRORS</span> <span class="val danger">{{ERRORS}}</span></div>
+                <div class="q-stat"><span>WARNINGS</span> <span class="val warning">{{WARNINGS}}</span></div>
+            </div>
+        </div>
+    </div>
+    <div class="page">
+        <div class="bg-grid"></div>
+        <div class="content">
+            <div class="section-header">
+                <div>
+                    <h2 class="section-title">Analysis</h2>
+                    <p class="section-subtitle">COMPONENT SCORING BREAKDOWN</p>
+                </div>
+                <div class="url-badge" style="font-size: 8pt;">RANK: {{GRADE}}</div>
+            </div>
+            <div class="category-grid">{{CATEGORY_ITEMS}}</div>
+            <div style="margin-top: 40px; color: var(--text-muted); font-size: 9pt; max-width: 400px;">
+                This audit cross-references {{RULE_COUNT}} automated rules across {{CATEGORY_COUNT}} core optimization vectors.
+            </div>
+            <div class="page-footer"><span>{{URL}}</span><span>SYSTEM_LOG // PAGE_02</span></div>
+        </div>
+    </div>
+    <div class="page">
+        <div class="bg-grid"></div>
+        <div class="content">
+            <div class="section-header">
+                <div>
+                    <h2 class="section-title" style="color: var(--danger);">Critical</h2>
+                    <p class="section-subtitle">IMMEDIATE ATTENTION REQUIRED</p>
+                </div>
+                <div class="url-badge" style="font-size: 8pt; color: var(--danger);">{{ERRORS}} FAILURES</div>
+            </div>
+            <div class="issue-list">{{ERROR_ITEMS}}</div>
+            <div class="page-footer"><span>{{URL}}</span><span>SYSTEM_LOG // PAGE_03</span></div>
+        </div>
+    </div>
+    <div class="page">
+        <div class="bg-grid"></div>
+        <div class="content">
+            <div class="section-header">
+                <div>
+                    <h2 class="section-title" style="color: var(--warning);">Warnings</h2>
+                    <p class="section-subtitle">OPTIMIZATION OPPORTUNITIES</p>
+                </div>
+                <div class="url-badge" style="font-size: 8pt; color: var(--warning);">{{WARNINGS}} ALERTS</div>
+            </div>
+            <div class="issue-list">{{WARNING_ITEMS}}</div>
+            <div class="page-footer"><span>{{URL}}</span><span>SYSTEM_LOG // PAGE_04</span></div>
+        </div>
+    </div>
+    <div class="page">
+        <div class="bg-grid"></div>
+        <div class="content">
+            <div class="section-header">
+                <div>
+                    <h2 class="section-title">Action</h2>
+                    <p class="section-subtitle">PRIORITIZED REMEDIATION STEPS</p>
+                </div>
+            </div>
+            <div class="issue-list">{{PRIORITY_ITEMS}}</div>
+            <div class="page-footer"><span>{{URL}}</span><span>SYSTEM_LOG // PAGE_05</span></div>
+        </div>
+    </div>
+    <div class="page final-page">
+        <div class="bg-grid"></div>
+        <div class="final-score-ring">
+            <div class="final-val">{{SCORE}}</div>
+            <div class="final-grade">{{GRADE}} RATING</div>
+        </div>
+        <div class="conclusion-box">{{CONCLUSION}}</div>
+        <div class="page-footer" style="border: none;">
+            <span>END OF REPORT</span>
+            <span>GENERATED BY BEACONSCOPE ALPHA</span>
+        </div>
+    </div>
+</body>
+</html>

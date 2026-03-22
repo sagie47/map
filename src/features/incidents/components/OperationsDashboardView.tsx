@@ -240,7 +240,7 @@ export function OperationsDashboardView() {
       <div className="flex-1 relative z-0">
         {showTicker && (
           <div
-            className="pointer-events-none absolute top-6 left-1/2 -translate-x-1/2 z-[1000] w-fit max-w-[60%]"
+            className="pointer-events-none absolute top-16 left-1/2 -translate-x-1/2 z-[1000] w-fit max-w-[60%]"
           >
             <div className="overflow-hidden rounded-sm border border-[#1f1f1f] bg-[#070707]/88 px-4 py-2 shadow-[0_0_20px_rgba(249,115,22,0.12)] backdrop-blur-md">
               <div className="flex items-center gap-4 overflow-hidden whitespace-nowrap text-[9px] font-mono uppercase tracking-[0.2em] text-zinc-300">
@@ -256,7 +256,7 @@ export function OperationsDashboardView() {
         )}
 
         <div
-          className="pointer-events-none absolute bottom-6 z-[1000]"
+          className="pointer-events-none absolute top-6 z-[1000]"
           style={{ left: "24px" }}
         >
           <div
@@ -337,7 +337,7 @@ export function OperationsDashboardView() {
 
         {showMissionCard && (
           <div
-            className="pointer-events-none absolute bottom-6 right-6 z-[1000] w-80"
+            className="pointer-events-none absolute top-6 right-6 z-[1000] w-80"
           >
             <div className="pointer-events-auto rounded-sm border border-[#2a2a2a] bg-[#050505]/84 shadow-[0_0_28px_rgba(249,115,22,0.1)] backdrop-blur-sm">
               <div className="border-b border-[#2a2a2a] bg-gradient-to-r from-[#2a1208] to-[#090909] px-3 py-2">

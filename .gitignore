@@ -6,3 +6,5 @@ coverage/
 *.log
 .env*
 !.env.example
+# Imported nested repo metadata backup
+mission-control/.git.parent-import-backup/
