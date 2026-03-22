@@ -60,6 +60,30 @@ function MapUpdater({
   return null;
 }
 
+function ZoomControls() {
+  const map = useMap();
+
+  return (
+    <div className="absolute bottom-20 right-4 z-[1000] flex flex-col gap-1">
+      <button
+        onClick={() => map.zoomIn()}
+        className="w-11 h-11 flex items-center justify-center bg-[#111] hover:bg-[#1a1a1a] border border-[#1f1f1f] text-zinc-300 hover:text-zinc-100 transition-colors"
+        aria-label="Zoom in"
+      >
+        <span className="text-lg font-mono">+</span>
+      </button>
+      <button
+        onClick={() => map.zoomOut()}
+        className="w-11 h-11 flex items-center justify-center bg-[#111] hover:bg-[#1a1a1a] border border-[#1f1f1f] text-zinc-300 hover:text-zinc-100 transition-colors"
+        aria-label="Zoom out"
+        style={{ marginTop: '-1px' }}
+      >
+        <span className="text-lg font-mono">−</span>
+      </button>
+    </div>
+  );
+}
+
 export function MapView({
   incidents,
   receivers,
@@ -78,6 +102,8 @@ export function MapView({
       style={{ height: "100%", width: "100%", backgroundColor: "#000" }}
       zoomControl={false}
     >
+      <ZoomControls />
+
       <div className="absolute bottom-4 left-4 z-[1000] pointer-events-none">
         <div className="hud-panel p-3 pointer-events-auto">
           <h4 className="text-[10px] font-mono uppercase tracking-widest text-[#666] mb-2">/MAP_LEGEND</h4>
