@@ -10,49 +10,50 @@ export function EventFeed({
   onSelectIncident: (id: string) => void;
 }) {
   return (
-    <div className="flex flex-col h-full w-full">
-      <div className="p-4 border-b border-[#1f1f1f] flex items-center justify-between">
-        <h2 className="text-sm font-mono uppercase tracking-[0.15em] text-zinc-100 flex items-center">
-          <Activity className="w-4 h-4 mr-2 text-[#f97316]" />
+    <div className="flex h-full w-full flex-col overflow-hidden bg-[#0a0a0a]">
+      <div className="flex items-center justify-between border-b border-[#1f1f1f] p-4">
+        <h2 className="flex items-center text-base font-mono uppercase tracking-[0.15em] text-zinc-100 md:text-sm">
+          <Activity className="mr-2 h-4 w-4 text-[#f97316]" />
           Live Event Stream
         </h2>
-        <span className="px-2 py-0.5 text-[10px] font-mono uppercase tracking-widest bg-[#111] text-[#22c55e] border border-[#1f1f1f]">
+        <span className="border border-[#1f1f1f] bg-[#111] px-2 py-1 text-[11px] font-mono uppercase tracking-widest text-[#22c55e] md:py-0.5 md:text-[10px]">
           LIVE
         </span>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-2">
+      <div className="flex-1 space-y-2 overflow-y-auto p-4">
         {events.length === 0 ? (
-          <div className="text-center hud-text-muted py-8">
+          <div className="py-8 text-center text-xs font-mono uppercase tracking-[0.18em] text-[#666] md:text-[10px]">
             /WAITING_FOR_SIGNALS...
           </div>
         ) : (
           events.map((event) => (
-            <div
+            <button
               key={event.id}
-              className="p-3 bg-black border border-[#1f1f1f] hover:border-[#333] transition-colors cursor-pointer"
+              type="button"
+              className="w-full border border-[#1f1f1f] bg-black p-3 text-left transition-colors hover:border-[#333]"
               onClick={() => onSelectIncident(event.incidentId)}
             >
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-mono text-[#f97316] uppercase tracking-[0.15em]">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <span className="text-[11px] font-mono uppercase tracking-[0.15em] text-[#f97316] md:text-[10px]">
                   [{event.eventType}]
                 </span>
-                <span className="text-[10px] font-mono text-[#666]">
+                <span className="text-[11px] font-mono text-[#666] md:text-[10px]">
                   {formatDistanceToNow(new Date(event.detectedAt), {
                     addSuffix: true,
                   })}
                 </span>
               </div>
 
-              <div className="text-xs font-mono text-zinc-300 mb-2">
+              <div className="mb-2 text-sm font-mono text-zinc-300 md:text-xs">
                 INCIDENT: <span className="text-zinc-100">{event.incidentId}</span>
               </div>
 
-              <div className="flex items-center text-[10px] font-mono text-[#666] uppercase tracking-wider">
-                <Radio className="w-3 h-3 mr-1" />
+              <div className="flex items-center text-[11px] font-mono uppercase tracking-wider text-[#666] md:text-[10px]">
+                <Radio className="mr-1 h-3.5 w-3.5" />
                 {event.stationCode || event.receiverStationId}
               </div>
-            </div>
+            </button>
           ))
         )}
       </div>
