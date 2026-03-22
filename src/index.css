@@ -6,6 +6,12 @@
 }
 
 @layer base {
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+
   body {
     @apply bg-black text-zinc-300 antialiased;
     font-family: var(--font-sans);
@@ -59,6 +65,11 @@
   }
   .touch-target-field {
     @apply h-11;
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   /* Leaflet Popup Overrides */
