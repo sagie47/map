@@ -13,6 +13,23 @@ function cn(...inputs: (string | undefined | null | false)[]) {
   return twMerge(clsx(inputs));
 }
 
+function isPointWithinBounds(
+  lat: number,
+  lng: number,
+  bounds: [[number, number], [number, number]],
+) {
+  const [[minLng, minLat], [maxLng, maxLat]] = bounds;
+  const withinLat = lat >= minLat && lat <= maxLat;
+  if (!withinLat) return false;
+
+  // Globe views can wrap across the antimeridian, which means west > east.
+  if (minLng <= maxLng) {
+    return lng >= minLng && lng <= maxLng;
+  }
+
+  return lng >= minLng || lng <= maxLng;
+}
+
 function formatTrackAge(timestamp?: string) {
   if (!timestamp) return "unknown";
   const ageMs = Date.now() - Date.parse(timestamp);
@@ -160,9 +177,14 @@ export function MapView({
   const [mapDimension, setMapDimension] = useState<"2d" | "3d">("3d");
   const [showStyleMenu, setShowStyleMenu] = useState(false);
   const [showLayerMenu, setShowLayerMenu] = useState(false);
+  const [showDimensionMenu, setShowDimensionMenu] = useState(false);
   const [mapBounds, setMapBounds] = useState<[[number, number], [number, number]] | null>(null);
   const [mapZoom, setMapZoom] = useState(2.5);
   const [showFocusPulse, setShowFocusPulse] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia("(max-width: 900px), (pointer: coarse)").matches;
+  });
   const [layerVisibility, setLayerVisibility] = useState({
     incidents: true,
     vessels: true,
@@ -175,6 +197,15 @@ export function MapView({
   });
 
   const [searchAreaPolygon, setSearchAreaPolygon] = useState<GeoJSON.Feature | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mediaQuery = window.matchMedia("(max-width: 900px), (pointer: coarse)");
+    const applyMatch = () => setIsMobileViewport(mediaQuery.matches);
+    applyMatch();
+    mediaQuery.addEventListener("change", applyMatch);
+    return () => mediaQuery.removeEventListener("change", applyMatch);
+  }, []);
 
   const toggleLayer = (layer: keyof typeof layerVisibility) => {
     setLayerVisibility(prev => ({ ...prev, [layer]: !prev[layer] }));
@@ -215,16 +246,11 @@ export function MapView({
 
     // Viewport culling at higher zoom levels
     if (mapBounds) {
-      const [[minLng, minLat], [maxLng, maxLat]] = mapBounds;
-      visibleVessels = vessels.filter(v =>
-        v.lat >= minLat && v.lat <= maxLat && v.lng >= minLng && v.lng <= maxLng
-      );
+      visibleVessels = vessels.filter((v) => isPointWithinBounds(v.lat, v.lng, mapBounds));
     }
-    if (mapZoom < 4) {
-      visibleVessels = visibleVessels.slice(0, 2500);
-    } else {
-      visibleVessels = visibleVessels.slice(0, 1200);
-    }
+    const lowZoomCap = isMobileViewport ? 900 : 2500;
+    const highZoomCap = isMobileViewport ? 500 : 1200;
+    visibleVessels = visibleVessels.slice(0, mapZoom < 4 ? lowZoomCap : highZoomCap);
 
     return {
       type: "FeatureCollection" as const,
@@ -245,18 +271,15 @@ export function MapView({
         }
       }))
     };
-  }, [vessels, mapBounds, mapZoom]);
+  }, [vessels, mapBounds, mapZoom, isMobileViewport]);
 
   const aircraftPoints = useMemo(() => {
     let visibleAircraft = aircraft;
 
     if (mapBounds) {
-      const [[minLng, minLat], [maxLng, maxLat]] = mapBounds;
-      visibleAircraft = aircraft.filter(a =>
-        a.lat >= minLat && a.lat <= maxLat && a.lng >= minLng && a.lng <= maxLng
-      );
+      visibleAircraft = aircraft.filter((a) => isPointWithinBounds(a.lat, a.lng, mapBounds));
     }
-    visibleAircraft = visibleAircraft.slice(0, mapZoom < 4 ? 1800 : 900);
+    visibleAircraft = visibleAircraft.slice(0, mapZoom < 4 ? (isMobileViewport ? 700 : 1800) : (isMobileViewport ? 420 : 900));
 
     return {
       type: "FeatureCollection" as const,
@@ -274,18 +297,15 @@ export function MapView({
         }
       }))
     };
-  }, [aircraft, mapBounds, mapZoom]);
+  }, [aircraft, mapBounds, mapZoom, isMobileViewport]);
 
   const satellitePoints = useMemo(() => {
     let visibleSatellites = satellites;
 
     if (mapBounds) {
-      const [[minLng, minLat], [maxLng, maxLat]] = mapBounds;
-      visibleSatellites = satellites.filter(s =>
-        s.lat >= minLat && s.lat <= maxLat && s.lng >= minLng && s.lng <= maxLng
-      );
+      visibleSatellites = satellites.filter((s) => isPointWithinBounds(s.lat, s.lng, mapBounds));
     }
-    visibleSatellites = visibleSatellites.slice(0, mapZoom < 4 ? 1200 : 700);
+    visibleSatellites = visibleSatellites.slice(0, mapZoom < 4 ? (isMobileViewport ? 500 : 1200) : (isMobileViewport ? 320 : 700));
 
     return {
       type: "FeatureCollection" as const,
@@ -301,7 +321,7 @@ export function MapView({
         }
       }))
     };
-  }, [satellites, mapBounds, mapZoom]);
+  }, [satellites, mapBounds, mapZoom, isMobileViewport]);
 
   const alertFeatures = useMemo(() => ({
     type: "FeatureCollection" as const,
@@ -434,26 +454,28 @@ export function MapView({
   }, [focusTarget?.center, showFocusPulse]);
 
   useEffect(() => {
+    const pitch = mapDimension === "3d" ? (isMobileViewport ? 35 : 45) : 0;
     if (selectedIncident && mapRef.current) {
       mapRef.current.flyTo({
         center: [selectedIncident.estimatedLng, selectedIncident.estimatedLat],
         zoom: 6,
-        pitch: mapDimension === "3d" ? 45 : 0,
+        pitch,
         duration: 1500,
       });
     }
-  }, [selectedIncident, mapDimension]);
+  }, [selectedIncident, mapDimension, isMobileViewport]);
 
   useEffect(() => {
     if (!focusTarget?.center || !mapRef.current) {
       return;
     }
 
+    const pitch = mapDimension === "3d" ? (isMobileViewport ? 35 : 45) : 0;
     setShowFocusPulse(true);
     mapRef.current.flyTo({
       center: [focusTarget.center.lng, focusTarget.center.lat],
       zoom: focusTarget.zoom ?? 6,
-      pitch: mapDimension === "3d" ? 45 : 0,
+      pitch,
       duration: 1200,
     });
 
@@ -462,20 +484,31 @@ export function MapView({
     }, 2200);
 
     return () => window.clearTimeout(timer);
-  }, [focusTarget?.nonce, focusTarget?.center, focusTarget?.zoom, mapDimension]);
+  }, [focusTarget?.nonce, focusTarget?.center, focusTarget?.zoom, mapDimension, isMobileViewport]);
 
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map) {
+    const mapRefValue = mapRef.current;
+    if (!mapRefValue) {
       return;
     }
 
-    map.easeTo({
-      pitch: mapDimension === "3d" ? 45 : 0,
+    const map = mapRefValue.getMap();
+    if (mapDimension === "3d") {
+      try {
+        map.setProjection("globe");
+      } catch {
+        setMapDimension("2d");
+      }
+    } else {
+      map.setProjection("mercator");
+    }
+
+    mapRefValue.easeTo({
+      pitch: mapDimension === "3d" ? (isMobileViewport ? 35 : 45) : 0,
       bearing: 0,
       duration: 450,
     });
-  }, [mapDimension]);
+  }, [mapDimension, isMobileViewport]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -569,20 +602,22 @@ export function MapView({
   return (
     <div className="relative w-full h-full bg-black overflow-hidden">
       {/* Legend */}
-      <div 
-        className="absolute bottom-6 z-[1000] pointer-events-none transition-all duration-300"
-        style={{ left: `${leftPanelOffsetPx + 16}px` }}
-      >
-        <div className="hud-panel p-2.5 pointer-events-auto bg-[#0a0a0a]/80 border border-[#1f1f1f] rounded-none backdrop-blur-sm shadow-[0_0_20px_rgba(0,0,0,0.5)]">
-          <h4 className="text-[9px] font-mono uppercase tracking-[0.2em] text-[#444] mb-2 px-0.5">/LEGEND</h4>
-          <div className="space-y-1.5 text-[9px] font-mono uppercase tracking-widest text-zinc-400">
-            <div className="flex items-center"><div className="w-1.5 h-1.5 bg-[#ef4444] mr-2"></div> INCIDENT</div>
-            <div className="flex items-center"><div className="w-1.5 h-1.5 bg-[#3b82f6] mr-2"></div> STATION</div>
-            <div className="flex items-center"><div className="w-1.5 h-1.5 bg-[#a855f7] rounded-full mr-2"></div> VESSEL</div>
-            <div className="flex items-center"><div className="w-1.5 h-1.5 bg-[#22d3ee] rounded-full mr-2"></div> AIRCRAFT</div>
+      {!isMobileViewport && (
+        <div
+          className="absolute bottom-6 z-[1000] pointer-events-none transition-all duration-300"
+          style={{ left: `${leftPanelOffsetPx + 16}px` }}
+        >
+          <div className="hud-panel p-2.5 pointer-events-auto bg-[#0a0a0a]/80 border border-[#1f1f1f] rounded-none backdrop-blur-sm shadow-[0_0_20px_rgba(0,0,0,0.5)]">
+            <h4 className="text-[9px] font-mono uppercase tracking-[0.2em] text-[#444] mb-2 px-0.5">/LEGEND</h4>
+            <div className="space-y-1.5 text-[9px] font-mono uppercase tracking-widest text-zinc-400">
+              <div className="flex items-center"><div className="w-1.5 h-1.5 bg-[#ef4444] mr-2"></div> INCIDENT</div>
+              <div className="flex items-center"><div className="w-1.5 h-1.5 bg-[#3b82f6] mr-2"></div> STATION</div>
+              <div className="flex items-center"><div className="w-1.5 h-1.5 bg-[#a855f7] rounded-full mr-2"></div> VESSEL</div>
+              <div className="flex items-center"><div className="w-1.5 h-1.5 bg-[#22d3ee] rounded-full mr-2"></div> AIRCRAFT</div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Map Style & Layer Controls */}
       <div 
@@ -659,6 +694,38 @@ export function MapView({
               </div>
             )}
           </div>
+
+          <div className="relative">
+            <button
+              onClick={() => setShowDimensionMenu(!showDimensionMenu)}
+              className="hud-panel w-8 h-8 flex items-center justify-center bg-[#0a0a0a]/80 border border-[#1f1f1f] hover:bg-[#111] transition-colors text-zinc-400 hover:text-white"
+              title="Map Dimension"
+            >
+              <span className="text-[10px] font-mono">{mapDimension === "3d" ? "3D" : "2D"}</span>
+            </button>
+            {showDimensionMenu && (
+              <div className="absolute top-0 left-full ml-1 hud-panel p-1 bg-[#0a0a0a]/95 border border-[#1f1f1f] flex flex-col gap-0.5 w-20 pointer-events-auto backdrop-blur-md">
+                <button
+                  onClick={() => { setMapDimension("3d"); setShowDimensionMenu(false); }}
+                  className={cn(
+                    "px-2 py-1.5 text-left text-[9px] font-mono uppercase tracking-widest transition-colors",
+                    mapDimension === "3d" ? "bg-[#1f1f1f] text-[#f97316]" : "text-zinc-500 hover:bg-[#111] hover:text-zinc-300",
+                  )}
+                >
+                  3D
+                </button>
+                <button
+                  onClick={() => { setMapDimension("2d"); setShowDimensionMenu(false); }}
+                  className={cn(
+                    "px-2 py-1.5 text-left text-[9px] font-mono uppercase tracking-widest transition-colors",
+                    mapDimension === "2d" ? "bg-[#1f1f1f] text-[#f97316]" : "text-zinc-500 hover:bg-[#111] hover:text-zinc-300",
+                  )}
+                >
+                  2D
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -669,16 +736,18 @@ export function MapView({
           longitude: 10,
           latitude: 35,
           zoom: 2.5,
-          pitch: 45,
+          pitch: isMobileViewport ? 35 : 45,
           bearing: 0,
         }}
-        reuseMaps={true}
+        reuseMaps={!isMobileViewport}
         mapStyle={mapStyle === "satellite" ? "mapbox://styles/mapbox/satellite-streets-v12" : "mapbox://styles/mapbox/dark-v11"}
         projection={mapDimension === "3d" ? "globe" : "mercator"}
         interactiveLayerIds={INTERACTIVE_LAYER_IDS}
         terrain={mapStyle === "satellite" && mapDimension === "3d" ? { source: 'mapbox-dem', exaggeration: 1.5 } : undefined}
         onLoad={updateViewportMetrics}
         onMoveEnd={updateViewportMetrics}
+        dragRotate={mapDimension === "3d"}
+        pitchWithRotate={mapDimension === "3d"}
         onClick={(e) => {
           const feature = e.features?.[0];
           // Handle Cluster Clicking
@@ -713,6 +782,9 @@ export function MapView({
           setPinnedInfo(null);
         }}
         onMouseMove={(e) => {
+          if (isMobileViewport) {
+            return;
+          }
           const feature = e.features?.[0];
           const canvas = e.target.getCanvas();
 
@@ -740,12 +812,14 @@ export function MapView({
           clearHover(canvas);
         }}
         onMouseLeave={(e) => {
+          if (isMobileViewport) {
+            return;
+          }
           if (!pinnedInfo) {
             clearHover(e.target.getCanvas());
           }
         }}
       >
-        <NavigationControl position="top-right" />
         <Source id="mapbox-dem" type="raster-dem" url="mapbox://mapbox.mapbox-terrain-dem-v1" tileSize={512} maxzoom={14} />
 
         {/* Selected Incident Uncertainty Area */}
