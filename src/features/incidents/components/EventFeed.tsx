@@ -23,21 +23,20 @@ export function EventFeed({
 
       <div className="flex-1 overflow-y-auto p-4 space-y-2">
         {events.length === 0 ? (
-          <div className="text-center hud-text-muted py-8">
-            /WAITING_FOR_SIGNALS...
-          </div>
+          <div className="text-center hud-text-muted py-8">/WAITING_FOR_SIGNALS...</div>
         ) : (
           events.map((event) => (
-            <div
+            <button
               key={event.id}
-              className="p-3 bg-black border border-[#1f1f1f] hover:border-[#333] transition-colors cursor-pointer"
+              type="button"
+              className="touch-target w-full min-h-11 p-3 bg-black border border-[#1f1f1f] hover:border-[#333] transition-colors text-left"
               onClick={() => onSelectIncident(event.incidentId)}
             >
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-2 gap-3">
                 <span className="text-[10px] font-mono text-[#f97316] uppercase tracking-[0.15em]">
                   [{event.eventType}]
                 </span>
-                <span className="text-[10px] font-mono text-[#666]">
+                <span className="text-[10px] font-mono text-[#666] whitespace-nowrap">
                   {formatDistanceToNow(new Date(event.detectedAt), {
                     addSuffix: true,
                   })}
@@ -52,7 +51,7 @@ export function EventFeed({
                 <Radio className="w-3 h-3 mr-1" />
                 {event.stationCode || event.receiverStationId}
               </div>
-            </div>
+            </button>
           ))
         )}
       </div>

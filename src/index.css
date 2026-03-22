@@ -11,6 +11,12 @@
     font-family: var(--font-sans);
   }
 
+  button,
+  input,
+  select {
+    min-height: 44px;
+  }
+
   /* Custom Scrollbar for HUD feel */
   ::-webkit-scrollbar {
     width: 6px;
@@ -45,6 +51,15 @@
   .hud-success {
     @apply text-[#22c55e]; /* Green */
   }
+  .touch-target {
+    @apply min-h-11;
+  }
+  .touch-target-icon {
+    @apply min-h-11 min-w-11 inline-flex items-center justify-center;
+  }
+  .touch-target-field {
+    @apply h-11;
+  }
 
   /* Leaflet Popup Overrides */
   .hud-popup .leaflet-popup-content-wrapper {
@@ -55,5 +70,14 @@
   }
   .hud-popup .leaflet-popup-content {
     @apply m-0;
+  }
+  .leaflet-control-layers-toggle,
+  .leaflet-popup-close-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .leaflet-touch .leaflet-control-layers-toggle {
+    width: 44px;
+    height: 44px;
   }
 }

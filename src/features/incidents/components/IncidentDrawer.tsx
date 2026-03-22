@@ -5,7 +5,6 @@ import {
   MapPin,
   Radio,
   AlertTriangle,
-  CheckCircle,
   Clock,
   Activity,
   Play,
@@ -35,7 +34,8 @@ export function IncidentDrawer({
         </h2>
         <button
           onClick={onClose}
-          className="p-1 text-[#666] hover:text-zinc-100 hover:bg-[#111] transition-colors"
+          aria-label="Close incident details"
+          className="touch-target-icon text-[#666] hover:text-zinc-100 hover:bg-[#111] transition-colors"
         >
           <X className="w-4 h-4" />
         </button>
@@ -59,8 +59,8 @@ export function IncidentDrawer({
               incident.severity === INCIDENT_SEVERITIES.LOW
                 ? "bg-[#111] text-yellow-500 border-[#1f1f1f]"
                 : incident.severity === INCIDENT_SEVERITIES.MEDIUM
-                ? "bg-[#111] text-[#f97316] border-[#1f1f1f]"
-                : "bg-[#111] text-red-500 border-[#1f1f1f]"
+                  ? "bg-[#111] text-[#f97316] border-[#1f1f1f]"
+                  : "bg-[#111] text-red-500 border-[#1f1f1f]"
             }`}
           >
             {incident.severity}
@@ -107,18 +107,16 @@ export function IncidentDrawer({
 
           <button
             onClick={() => navigate(`/replay/${incident.id}`)}
-            className="w-full mt-4 flex items-center justify-center py-2 px-4 bg-[#111] hover:bg-[#1a1a1a] border border-[#1f1f1f] text-[11px] font-mono uppercase tracking-widest text-zinc-200 transition-colors"
+            className="touch-target w-full mt-4 flex items-center justify-center gap-2 py-2 px-4 bg-[#111] hover:bg-[#1a1a1a] border border-[#1f1f1f] text-[11px] font-mono uppercase tracking-widest text-zinc-200 transition-colors"
           >
-            <Play className="w-3 h-3 mr-2" />
+            <Play className="w-3 h-3" />
             REPLAY TIMELINE
           </button>
         </div>
 
         {/* Detection History */}
         <div>
-          <h3 className="hud-text-muted mb-3">
-            DETECTION HISTORY
-          </h3>
+          <h3 className="hud-text-muted mb-3">DETECTION HISTORY</h3>
           {loading ? (
             <div className="text-[10px] font-mono text-[#666] animate-pulse">
               /LOADING_EVENTS...
@@ -127,7 +125,7 @@ export function IncidentDrawer({
             <div className="text-[10px] font-mono text-[#666]">/NO_EVENTS_FOUND</div>
           ) : (
             <div className="space-y-3">
-              {events.map((event, idx) => (
+              {events.map((event) => (
                 <div
                   key={event.id}
                   className="relative pl-4 border-l border-[#1f1f1f] pb-4 last:pb-0"
@@ -165,12 +163,12 @@ function DetailRow({
   value: string | number;
 }) {
   return (
-    <div className="flex items-center justify-between text-[11px] font-mono uppercase">
-      <div className="flex items-center text-[#666]">
+    <div className="flex items-center justify-between text-[11px] font-mono uppercase gap-4">
+      <div className="flex items-center text-[#666] min-w-0">
         {icon}
         <span className="ml-2 tracking-widest">{label}</span>
       </div>
-      <div className="text-zinc-100">{value}</div>
+      <div className="text-zinc-100 text-right break-all">{value}</div>
     </div>
   );
 }

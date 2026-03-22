@@ -1,6 +1,6 @@
 import React from "react";
 import { Outlet, NavLink } from "react-router";
-import { Activity, Map, Radio, BarChart2, Settings, List } from "lucide-react";
+import { Map, Radio, BarChart2, List } from "lucide-react";
 
 export function Layout() {
   return (
@@ -74,15 +74,17 @@ function NavItem({
     <NavLink
       to={to}
       className={({ isActive }) =>
-        `flex items-center px-4 py-3 transition-colors border-l-2 ${
+        `touch-target flex min-h-11 items-center px-4 py-3 transition-colors border-l-2 ${
           isActive
             ? "bg-[#111] text-zinc-100 border-[#f97316]"
             : "text-[#666] hover:bg-[#111] hover:text-zinc-300 border-transparent"
         }`
       }
     >
-      <div className="flex items-center justify-center w-8 h-8 opacity-70">{icon}</div>
-      <span className="ml-2 hidden md:block text-[11px] font-mono uppercase tracking-[0.15em]">{label}</span>
+      <div className="touch-target-icon opacity-70">{icon}</div>
+      <span className="ml-2 hidden md:block text-[11px] font-mono uppercase tracking-[0.15em]">
+        {label}
+      </span>
     </NavLink>
   );
 }

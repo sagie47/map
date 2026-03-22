@@ -143,7 +143,7 @@ export function AnalyticsView() {
               </div>
               <div className="text-center mt-12 z-10">
                 <div className="hud-value text-5xl">{data.activeIncidents}</div>
-                <div className="hud-text-muted mt-2 flex items-center justify-center gap-1 cursor-pointer hover:text-zinc-300">
+                <div className="hud-text-muted mt-2 flex items-center justify-center gap-1">
                   Details <span className="text-[8px]">▼</span>
                 </div>
               </div>
