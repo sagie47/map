@@ -115,10 +115,12 @@ function NavItem({
 
         return mobile
           ? `flex min-w-fit items-center gap-2 whitespace-nowrap border px-3 py-2 text-[11px] font-mono uppercase tracking-[0.15em] transition-colors ${baseClasses}`
-          : `flex items-center border-l-2 px-4 py-3 transition-colors ${baseClasses}`;
+          : `touch-target flex items-center border-l-2 px-4 py-3 transition-colors ${baseClasses}`;
       }}
     >
-      <div className="flex h-8 w-8 items-center justify-center opacity-70">{icon}</div>
+      <div className={`${mobile ? "flex h-8 w-8 items-center justify-center" : "touch-target-icon"} opacity-70`}>
+        {icon}
+      </div>
       <span className={mobile ? "pr-1" : "ml-2 hidden text-[11px] font-mono uppercase tracking-[0.15em] md:block"}>
         {label}
       </span>

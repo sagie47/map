@@ -14,14 +14,14 @@ export function IncidentsTableView() {
   const filteredIncidents = incidents.filter((i) => {
     if (filter === INCIDENT_STATUSES.ACTIVE && i.status !== INCIDENT_STATUSES.ACTIVE) return false;
     if (filter === INCIDENT_STATUSES.RESOLVED && i.status !== INCIDENT_STATUSES.RESOLVED) return false;
-    
+
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       if (!i.id.toLowerCase().includes(query) && !i.beaconId.toLowerCase().includes(query)) {
         return false;
       }
     }
-    
+
     return true;
   });
 
@@ -29,13 +29,14 @@ export function IncidentsTableView() {
     return <div className="p-8 hud-text-muted text-red-500">/ERROR_LOADING_INCIDENTS</div>;
   }
 
-  if (isLoading)
+  if (isLoading) {
     return <div className="p-8 hud-text-muted">/LOADING_INCIDENTS...</div>;
+  }
 
   return (
     <div className="p-6 h-full overflow-y-auto bg-black">
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col gap-4 mb-6 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h1 className="text-2xl font-sans font-medium text-zinc-100 tracking-widest uppercase">
               Incident Directory
@@ -46,20 +47,20 @@ export function IncidentsTableView() {
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="relative">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#666]" />
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#666] pointer-events-none" />
               <input
                 type="text"
                 placeholder="SEARCH ID OR BEACON..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-4 py-2 bg-[#0a0a0a] border border-[#1f1f1f] rounded-none text-[11px] font-mono uppercase tracking-widest text-zinc-100 focus:outline-none focus:border-[#f97316] transition-colors w-64 placeholder:text-[#666]"
+                className="touch-target-field pl-10 pr-4 py-2 bg-[#0a0a0a] border border-[#1f1f1f] rounded-none text-[11px] font-mono uppercase tracking-widest text-zinc-100 focus:outline-none focus:border-[#f97316] transition-colors w-full sm:w-64 placeholder:text-[#666]"
               />
             </div>
 
             <select
-              className="px-4 py-2 bg-[#0a0a0a] border border-[#1f1f1f] rounded-none text-[11px] font-mono uppercase tracking-widest text-zinc-100 focus:outline-none focus:border-[#f97316] transition-colors"
+              className="touch-target-field px-4 py-2 bg-[#0a0a0a] border border-[#1f1f1f] rounded-none text-[11px] font-mono uppercase tracking-widest text-zinc-100 focus:outline-none focus:border-[#f97316] transition-colors"
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
             >
@@ -70,8 +71,8 @@ export function IncidentsTableView() {
           </div>
         </div>
 
-        <div className="hud-panel overflow-hidden">
-          <table className="w-full text-left text-[11px] font-mono uppercase tracking-widest text-zinc-400">
+        <div className="hud-panel overflow-x-auto">
+          <table className="w-full min-w-[860px] text-left text-[11px] font-mono uppercase tracking-widest text-zinc-400">
             <thead className="text-[#666] bg-[#111] border-b border-[#1f1f1f]">
               <tr>
                 <th className="px-6 py-4 font-normal">INCIDENT ID</th>
@@ -85,13 +86,8 @@ export function IncidentsTableView() {
             </thead>
             <tbody className="divide-y divide-[#1f1f1f]">
               {filteredIncidents.map((incident) => (
-                <tr
-                  key={incident.id}
-                  className="hover:bg-[#111] transition-colors"
-                >
-                  <td className="px-6 py-4 text-zinc-300">
-                    {incident.id}
-                  </td>
+                <tr key={incident.id} className="hover:bg-[#111] transition-colors">
+                  <td className="px-6 py-4 text-zinc-300">{incident.id}</td>
                   <td className="px-6 py-4">
                     <span
                       className={`px-2 py-0.5 text-[10px] border ${
@@ -117,9 +113,7 @@ export function IncidentsTableView() {
                       {incident.severity}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-zinc-300">
-                    {incident.domainType}
-                  </td>
+                  <td className="px-6 py-4 text-zinc-300">{incident.domainType}</td>
                   <td className="px-6 py-4">
                     {format(new Date(incident.firstSeenAt), "MMM d, HH:mm")}
                   </td>
@@ -130,10 +124,8 @@ export function IncidentsTableView() {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <button
-                      onClick={() =>
-                        navigate(`/operations?incident=${incident.id}`)
-                      }
-                      className="text-[#f97316] hover:text-[#ff8a3d] transition-colors"
+                      onClick={() => navigate(`/operations?incident=${incident.id}`)}
+                      className="touch-target inline-flex items-center justify-center px-3 text-[#f97316] hover:text-[#ff8a3d] transition-colors"
                     >
                       [VIEW]
                     </button>

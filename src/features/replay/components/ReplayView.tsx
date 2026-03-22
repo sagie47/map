@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef } from "react";
-import { useParams, useNavigate } from "react-router";
-import { MapView } from "../../../components/MapView";
-import { Play, Pause, SkipBack, SkipForward, ArrowLeft, Radio } from "lucide-react";
+import { useNavigate, useParams } from "react-router";
+import { ArrowLeft, Pause, Play, Radio, SkipBack, SkipForward } from "lucide-react";
 import { format } from "date-fns";
+
+import { MapView } from "../../../components/MapView";
+import { useReceivers } from "../../receivers/hooks";
 import { useReplayData, useReplayPlayback } from "../hooks";
 import { selectReplayedIncident } from "../selectors";
-import { useReceivers } from "../../receivers/hooks";
 
 export function ReplayView() {
   const { id } = useParams();
@@ -18,7 +19,7 @@ export function ReplayView() {
     data?.events || [],
   );
 
-  const activeEventRef = useRef<HTMLDivElement>(null);
+  const activeEventRef = useRef<HTMLButtonElement>(null);
   const timelineTrackRef = useRef<HTMLDivElement>(null);
   const isScrubbingRef = useRef(false);
 
@@ -28,16 +29,13 @@ export function ReplayView() {
     }
   }, [currentIndex]);
 
-  const clampSeekIndex = useCallback(
-    (index: number, eventCount: number) => {
-      if (eventCount <= 0) {
-        return 0;
-      }
+  const clampSeekIndex = useCallback((index: number, eventCount: number) => {
+    if (eventCount <= 0) {
+      return 0;
+    }
 
-      return Math.min(Math.max(index, 0), eventCount - 1);
-    },
-    [],
-  );
+    return Math.min(Math.max(index, 0), eventCount - 1);
+  }, []);
 
   const seekFromClientX = useCallback(
     (clientX: number, eventCount: number) => {
@@ -61,12 +59,16 @@ export function ReplayView() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-full w-full bg-black text-[#666]">
-        <div className="text-xl font-mono uppercase tracking-widest text-zinc-100 mb-2">/INCIDENT_NOT_FOUND</div>
-        <p className="mb-6 font-mono text-[11px] uppercase tracking-widest">The incident you are looking for does not exist or has been removed.</p>
+      <div className="flex h-full w-full flex-col items-center justify-center bg-black text-[#666]">
+        <div className="mb-2 text-xl font-mono uppercase tracking-widest text-zinc-100">
+          /INCIDENT_NOT_FOUND
+        </div>
+        <p className="mb-6 font-mono text-[11px] uppercase tracking-widest">
+          The incident you are looking for does not exist or has been removed.
+        </p>
         <button
           onClick={() => navigate("/operations")}
-          className="px-4 py-2 bg-[#111] border border-[#1f1f1f] text-[11px] font-mono uppercase tracking-widest text-zinc-200 hover:bg-[#1a1a1a] transition-colors"
+          className="touch-target inline-flex items-center justify-center border border-[#1f1f1f] bg-[#111] px-4 py-2 text-[11px] font-mono uppercase tracking-widest text-zinc-200 transition-colors hover:bg-[#1a1a1a]"
         >
           [RETURN TO OPERATIONS]
         </button>
@@ -85,7 +87,7 @@ export function ReplayView() {
   const stepForward = () => seekTo(clampSeekIndex(currentIndex + 1, events.length));
 
   return (
-    <div className="flex flex-col h-full w-full bg-black">
+    <div className="flex h-full w-full flex-col bg-black">
       <style>{`
         .replay-timeline-slider {
           -webkit-appearance: none;
@@ -133,67 +135,65 @@ export function ReplayView() {
         }
       `}</style>
 
-      {/* Top Bar */}
-      <div className="h-16 border-b border-[#1f1f1f] flex items-center px-4 md:px-6 justify-between bg-[#0a0a0a] gap-3">
-        <div className="flex items-center min-w-0">
+      <div className="flex h-16 items-center justify-between gap-3 border-b border-[#1f1f1f] bg-[#0a0a0a] px-4 md:px-6">
+        <div className="flex min-w-0 items-center">
           <button
             onClick={() => navigate(-1)}
-            className="mr-3 md:mr-4 text-[#666] hover:text-zinc-100 transition-colors min-h-11 min-w-11 inline-flex items-center justify-center"
+            className="touch-target-icon mr-3 text-[#666] transition-colors hover:bg-[#111] hover:text-zinc-100 md:mr-4"
             aria-label="Return to previous view"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="h-5 w-5" />
           </button>
           <div className="min-w-0">
-            <h1 className="text-sm md:text-lg font-mono uppercase tracking-[0.15em] text-zinc-100 truncate">
+            <h1 className="truncate text-sm font-mono uppercase tracking-[0.15em] text-zinc-100 md:text-lg">
               REPLAY // {incident.id}
             </h1>
           </div>
-          <span className="ml-3 md:ml-4 px-2 py-0.5 text-[10px] font-mono uppercase tracking-widest border bg-[#111] text-[#3b82f6] border-[#1f1f1f] hidden sm:inline-flex">
+          <span className="ml-3 hidden border border-[#1f1f1f] bg-[#111] px-2 py-0.5 text-[10px] font-mono uppercase tracking-widest text-[#3b82f6] sm:inline-flex md:ml-4">
             /MODE REPLAY
           </span>
         </div>
 
-        <div className="flex items-center gap-3 md:gap-4 shrink-0">
-          <div className="text-[11px] font-mono text-[#666] uppercase tracking-widest hidden lg:block">
+        <div className="shrink-0 flex items-center gap-3 md:gap-4">
+          <div className="hidden text-[11px] font-mono uppercase tracking-widest text-[#666] lg:block">
             {format(new Date(currentEvent.detectedAt), "yyyy-MM-dd HH:mm:ss")}
           </div>
 
-          <div className="flex items-center bg-[#111] border border-[#1f1f1f] p-1 gap-1">
+          <div className="flex items-center gap-1 border border-[#1f1f1f] bg-[#111] p-1">
             <button
               onClick={() => seekTo(0)}
-              className="min-h-11 min-w-11 inline-flex items-center justify-center text-[#666] hover:text-zinc-100 transition-colors"
+              className="touch-target-icon text-[#666] transition-colors hover:bg-[#1a1a1a] hover:text-zinc-100"
               aria-label="Jump to first event"
             >
-              <SkipBack className="w-4 h-4" />
+              <SkipBack className="h-4 w-4" />
             </button>
             <button
               onClick={stepBackward}
-              className="min-h-11 min-w-11 inline-flex items-center justify-center text-[#666] hover:text-zinc-100 transition-colors sm:hidden"
+              className="touch-target-icon text-[#666] transition-colors hover:bg-[#1a1a1a] hover:text-zinc-100 sm:hidden"
               aria-label="Step to previous event"
             >
-              <SkipBack className="w-4 h-4" />
+              <SkipBack className="h-4 w-4" />
             </button>
             <button
               onClick={togglePlayback}
-              className="min-h-11 min-w-11 inline-flex items-center justify-center text-[#666] hover:text-zinc-100 transition-colors"
+              className="touch-target-icon text-[#666] transition-colors hover:bg-[#1a1a1a] hover:text-zinc-100"
               aria-label={isPlaying ? "Pause replay" : "Play replay"}
             >
-              {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+              {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
             </button>
             <button
               onClick={stepForward}
-              className="min-h-11 min-w-11 inline-flex items-center justify-center text-[#666] hover:text-zinc-100 transition-colors sm:hidden"
+              className="touch-target-icon text-[#666] transition-colors hover:bg-[#1a1a1a] hover:text-zinc-100 sm:hidden"
               aria-label="Step to next event"
             >
-              <SkipForward className="w-4 h-4" />
+              <SkipForward className="h-4 w-4" />
             </button>
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 relative flex min-h-0">
-        <div className="flex-1 relative min-h-0">
+      <div className="relative flex min-h-0 flex-1">
+        <div className="relative min-h-0 flex-1">
           <MapView
             incidents={replayedIncident ? [replayedIncident] : []}
             receivers={receivers}
@@ -201,12 +201,11 @@ export function ReplayView() {
             onSelectIncident={() => {}}
           />
 
-          {/* Progress Bar Overlay */}
-          <div className="absolute bottom-4 md:bottom-8 left-1/2 -translate-x-1/2 w-full max-w-3xl px-3 md:px-4 z-[1000]">
-            <div className="hud-panel p-4 md:p-5 shadow-2xl">
-              <div className="flex items-center justify-between gap-3 text-[10px] text-[#666] mb-3 font-mono uppercase tracking-widest">
+          <div className="absolute bottom-4 left-1/2 z-[1000] w-full max-w-3xl -translate-x-1/2 px-3 md:bottom-8 md:px-4">
+            <div className="hud-panel p-4 shadow-2xl md:p-5">
+              <div className="mb-3 flex items-center justify-between gap-3 text-[10px] font-mono uppercase tracking-widest text-[#666]">
                 <span>{format(new Date(events[0].detectedAt), "HH:mm:ss")}</span>
-                <span className="text-center text-zinc-300 text-[11px]">
+                <span className="text-center text-[11px] text-zinc-300">
                   EVENT {currentIndex + 1} / {events.length}
                 </span>
                 <span>{format(new Date(events[events.length - 1].detectedAt), "HH:mm:ss")}</span>
@@ -215,7 +214,7 @@ export function ReplayView() {
               <div className="space-y-3">
                 <div
                   ref={timelineTrackRef}
-                  className="relative flex items-center h-12 md:h-14 rounded-full px-1 bg-[#050505]/80 border border-[#1f1f1f] touch-none"
+                  className="relative flex h-12 touch-none items-center rounded-full border border-[#1f1f1f] bg-[#050505]/80 px-1 md:h-14"
                   onPointerDown={(event) => {
                     event.preventDefault();
                     isScrubbingRef.current = true;
@@ -256,7 +255,7 @@ export function ReplayView() {
                     style={{
                       ["--timeline-progress" as string]: `${(currentIndex / Math.max(events.length - 1, 1)) * 100}%`,
                     }}
-                    className="replay-timeline-slider relative z-10 w-full h-11 cursor-pointer"
+                    className="replay-timeline-slider touch-target-field relative z-10 h-11 w-full cursor-pointer"
                   />
                 </div>
 
@@ -264,17 +263,20 @@ export function ReplayView() {
                   <button
                     type="button"
                     onClick={stepBackward}
-                    className="min-h-11 px-4 inline-flex items-center justify-center border border-[#1f1f1f] bg-[#111] text-[#666] hover:text-zinc-100 transition-colors"
+                    className="touch-target inline-flex items-center justify-center border border-[#1f1f1f] bg-[#111] px-4 text-[#666] transition-colors hover:text-zinc-100"
                   >
                     PREV
                   </button>
                   <div className="text-center">
-                    DETECTED BY <span className="text-[#22c55e]">{currentEvent.stationName || currentEvent.receiverStationId}</span>
+                    DETECTED BY{" "}
+                    <span className="text-[#22c55e]">
+                      {currentEvent.stationName || currentEvent.receiverStationId}
+                    </span>
                   </div>
                   <button
                     type="button"
                     onClick={stepForward}
-                    className="min-h-11 px-4 inline-flex items-center justify-center border border-[#1f1f1f] bg-[#111] text-[#666] hover:text-zinc-100 transition-colors"
+                    className="touch-target inline-flex items-center justify-center border border-[#1f1f1f] bg-[#111] px-4 text-[#666] transition-colors hover:text-zinc-100"
                   >
                     NEXT
                   </button>
@@ -288,44 +290,50 @@ export function ReplayView() {
           </div>
         </div>
 
-        {/* Right Sidebar - Event List */}
-        <div className="hidden xl:flex w-80 bg-[#0a0a0a] border-l border-[#1f1f1f] flex-col z-10 overflow-y-auto">
-          <div className="p-4 border-b border-[#1f1f1f]">
-            <h2 className="text-[11px] font-mono uppercase tracking-widest text-zinc-100">/DETECTION_TIMELINE</h2>
+        <div className="z-10 hidden w-80 flex-col overflow-y-auto border-l border-[#1f1f1f] bg-[#0a0a0a] xl:flex">
+          <div className="border-b border-[#1f1f1f] p-4">
+            <h2 className="text-[11px] font-mono uppercase tracking-widest text-zinc-100">
+              /DETECTION_TIMELINE
+            </h2>
           </div>
-          <div className="p-4 space-y-3">
+          <div className="space-y-3 p-4">
             {events.map((event, idx) => {
               const isActive = idx === currentIndex;
               const isPast = idx < currentIndex;
 
               return (
-                <div
+                <button
                   key={event.id}
+                  type="button"
                   ref={isActive ? activeEventRef : null}
                   onClick={() => {
                     seekTo(idx);
                   }}
-                  className={`p-3 border cursor-pointer transition-colors ${
+                  className={`touch-target w-full border p-3 text-left transition-colors ${
                     isActive
-                      ? "bg-[#111] border-[#f97316]"
+                      ? "border-[#f97316] bg-[#111]"
                       : isPast
-                        ? "bg-[#111] border-[#1f1f1f] hover:border-[#333]"
-                        : "bg-black border-[#1f1f1f] opacity-50 hover:opacity-100"
+                        ? "border-[#1f1f1f] bg-[#111] hover:border-[#333]"
+                        : "border-[#1f1f1f] bg-black opacity-50 hover:opacity-100"
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className={`text-[10px] font-mono uppercase tracking-widest ${isActive ? "text-[#f97316]" : "text-[#666]"}`}>
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <span
+                      className={`text-[10px] font-mono uppercase tracking-widest ${
+                        isActive ? "text-[#f97316]" : "text-[#666]"
+                      }`}
+                    >
                       {event.eventType}
                     </span>
-                    <span className="text-[10px] font-mono text-[#666]">
+                    <span className="whitespace-nowrap text-[10px] font-mono text-[#666]">
                       {format(new Date(event.detectedAt), "HH:mm:ss")}
                     </span>
                   </div>
                   <div className="flex items-center text-[11px] font-mono uppercase tracking-widest text-zinc-300">
-                    <Radio className="w-3 h-3 mr-1.5 text-[#666]" />
+                    <Radio className="mr-1.5 h-3 w-3 text-[#666]" />
                     {event.stationName || event.receiverStationId}
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>

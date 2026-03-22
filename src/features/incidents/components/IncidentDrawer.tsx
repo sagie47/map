@@ -38,8 +38,8 @@ export function IncidentDrawer({
         </div>
         <button
           onClick={onClose}
-          className="rounded-sm p-2 text-[#666] transition-colors hover:bg-[#111] hover:text-zinc-100"
           aria-label="Close incident details"
+          className="touch-target-icon rounded-sm text-[#666] transition-colors hover:bg-[#111] hover:text-zinc-100"
         >
           <X className="h-4 w-4" />
         </button>
@@ -100,7 +100,7 @@ export function IncidentDrawer({
 
           <button
             onClick={() => navigate(`/replay/${incident.id}`)}
-            className="mt-4 flex w-full items-center justify-center border border-[#1f1f1f] bg-[#111] px-4 py-3 text-xs font-mono uppercase tracking-widest text-zinc-200 transition-colors hover:bg-[#1a1a1a] md:py-2 md:text-[11px]"
+            className="touch-target mt-4 flex w-full items-center justify-center border border-[#1f1f1f] bg-[#111] px-4 py-3 text-xs font-mono uppercase tracking-widest text-zinc-200 transition-colors hover:bg-[#1a1a1a] md:py-2 md:text-[11px]"
           >
             <Play className="mr-2 h-3.5 w-3.5" />
             REPLAY TIMELINE

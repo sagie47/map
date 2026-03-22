@@ -31,7 +31,7 @@ export function EventFeed({
             <button
               key={event.id}
               type="button"
-              className="w-full border border-[#1f1f1f] bg-black p-3 text-left transition-colors hover:border-[#333]"
+              className="touch-target w-full border border-[#1f1f1f] bg-black p-3 text-left transition-colors hover:border-[#333]"
               onClick={() => onSelectIncident(event.incidentId)}
             >
               <div className="mb-2 flex items-center justify-between gap-3">
