@@ -2,6 +2,8 @@ import { useState, type ReactNode } from "react";
 import { BarChart2, ChevronLeft, ChevronRight, List, Map, Radio } from "lucide-react";
 import { NavLink, Outlet } from "react-router";
 
+import { cn } from "../utils/cn";
+
 const navItems = [
   {
     to: "/operations",
@@ -59,13 +61,15 @@ export function Layout() {
       </header>
 
       <aside
-        className={`relative hidden shrink-0 flex-col border-r border-[#1f1f1f] bg-[#0a0a0a] transition-[width] duration-200 md:flex ${
-          isCollapsed ? "md:w-16" : "md:w-64"
-        }`}
+        id="primary-sidebar"
+        className={cn(
+          "relative hidden shrink-0 flex-col border-r border-[#1f1f1f] bg-[#0a0a0a] transition-[width] duration-200 md:flex",
+          isCollapsed ? "md:w-16" : "md:w-64",
+        )}
       >
         <div className="flex h-16 items-center justify-center border-b border-[#1f1f1f] md:justify-start md:px-6">
           <Radio className="h-5 w-5 text-zinc-500" />
-          <div className={`ml-3 flex-col ${isCollapsed ? "hidden" : "hidden md:flex"}`}>
+          <div className={cn("ml-3 flex-col", isCollapsed ? "hidden" : "hidden md:flex")}>
             <span className="text-lg leading-none font-bold uppercase tracking-[0.2em] text-zinc-100">
               SentriX
             </span>
@@ -77,6 +81,9 @@ export function Layout() {
           type="button"
           onClick={() => setIsCollapsed((value) => !value)}
           className="absolute -right-3 top-20 z-20 hidden h-6 w-6 items-center justify-center rounded-full border border-[#333] bg-[#1f1f1f] text-zinc-400 shadow-md transition-colors hover:bg-[#333] hover:text-zinc-100 md:flex"
+          aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-expanded={!isCollapsed}
+          aria-controls="primary-sidebar"
           title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {isCollapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
@@ -94,7 +101,7 @@ export function Layout() {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#22c55e] opacity-75"></span>
               <span className="relative inline-flex h-2 w-2 rounded-full bg-[#22c55e]"></span>
             </span>
-            <span className={`hud-text-muted text-[#22c55e] ${isCollapsed ? "hidden" : "hidden md:block"}`}>
+            <span className={cn("hud-text-muted text-[#22c55e]", isCollapsed ? "hidden" : "hidden md:block")}>
               LINK ESTABLISHED
             </span>
           </div>
@@ -140,7 +147,7 @@ function NavItem({
         className={
           mobile
             ? "pr-1"
-            : `ml-2 text-[11px] font-mono uppercase tracking-[0.15em] ${isCollapsed ? "hidden" : "hidden md:block"}`
+            : cn("ml-2 text-[11px] font-mono uppercase tracking-[0.15em]", isCollapsed ? "hidden" : "hidden md:block")
         }
       >
         {label}

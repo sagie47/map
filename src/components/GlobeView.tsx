@@ -67,6 +67,7 @@ export function GlobeView({
     () => incidents.find((incident) => incident.id === selectedIncidentId) ?? null,
     [incidents, selectedIncidentId],
   );
+  const isMobileSafeMode = isCompactViewport && !isMapReady;
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -77,14 +78,20 @@ export function GlobeView({
     const updateViewportMode = () => {
       const isCompact = mediaQuery.matches;
       setIsCompactViewport(isCompact);
-      setProjection((current) => (isCompact ? "mercator" : current === "globe" ? current : "globe"));
+      setProjection((current) => {
+        if (isCompact && !isMapReady) {
+          return "mercator";
+        }
+
+        return current === "globe" ? current : "globe";
+      });
     };
 
     updateViewportMode();
     mediaQuery.addEventListener("change", updateViewportMode);
 
     return () => mediaQuery.removeEventListener("change", updateViewportMode);
-  }, []);
+  }, [isMapReady]);
 
   useEffect(() => {
     if (!selectedIncident || !mapRef.current || !isMapReady) {
@@ -311,7 +318,7 @@ export function GlobeView({
             {projection === "globe" ? "3D globe" : "2D globe map"}
           </span>
         </div>
-        {isCompactViewport && (
+        {isMobileSafeMode && (
           <div className="pointer-events-auto rounded-full border border-[#2a2a2a] bg-black/80 px-3 py-2 text-[10px] font-mono uppercase tracking-[0.16em] text-zinc-300 backdrop-blur-sm">
             Mobile safe mode
           </div>
@@ -322,18 +329,12 @@ export function GlobeView({
         <div className="pointer-events-auto grid grid-cols-3 gap-2 rounded-2xl border border-[#2a2a2a] bg-black/80 p-2 shadow-[0_12px_40px_rgba(0,0,0,0.55)] backdrop-blur-sm">
           <button
             type="button"
-            onClick={() => {
-              if (isCompactViewport) {
-                return;
-              }
-
-              setProjection((current) => (current === "globe" ? "mercator" : "globe"));
-            }}
-            disabled={isCompactViewport}
+            onClick={() => setProjection((current) => (current === "globe" ? "mercator" : "globe"))}
+            disabled={isMobileSafeMode}
             className="touch-target inline-flex items-center justify-center gap-2 rounded-xl border border-[#1f1f1f] bg-[#111] px-3 text-[10px] font-mono uppercase tracking-[0.16em] text-zinc-100 transition-colors hover:border-[#f97316] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-[#1f1f1f]"
           >
             <Compass className="h-4 w-4" />
-            {isCompactViewport ? "Mobile" : projection === "globe" ? "3D" : "2D"}
+            {isMobileSafeMode ? "Mobile" : projection === "globe" ? "3D" : "2D"}
           </button>
           <button
             type="button"

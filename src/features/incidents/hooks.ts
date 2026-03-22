@@ -1,12 +1,26 @@
+import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchIncidents, fetchIncident, fetchIncidentEvents, fetchRecentEvents } from './api';
 import { useSocketSubscription } from '../connection/hooks';
+import { useConnectionStore } from '../connection/store';
 import { WEBSOCKET_EVENTS } from "@shared/types/websocket";
 import { useNotificationStore } from '../notifications/store';
 import { THRESHOLDS } from "@shared/constants/thresholds";
 import { INCIDENT_STATUSES } from "@shared/constants/statuses";
 import { Incident } from "@shared/types/incidents";
 import { SignalEvent } from "@shared/types/events";
+
+function mergeLiveEvents(currentEvents: SignalEvent[], incomingEvents: SignalEvent[]) {
+  const byId = new Map<string, SignalEvent>();
+
+  for (const event of [...currentEvents, ...incomingEvents]) {
+    byId.set(event.id, event);
+  }
+
+  return Array.from(byId.values())
+    .sort((left, right) => Date.parse(right.detectedAt) - Date.parse(left.detectedAt))
+    .slice(0, 100);
+}
 
 export function useIncidents() {
   const queryClient = useQueryClient();
@@ -80,19 +94,28 @@ export function useIncidentEvents(id: string | null) {
 
 export function useLiveEvents() {
   const queryClient = useQueryClient();
+  const connectionStatus = useConnectionStore((state) => state.status);
 
   const query = useQuery({
     queryKey: ['live-events'],
-    queryFn: () => fetchRecentEvents(100),
+    queryFn: async () => {
+      const fetchedEvents = await fetchRecentEvents(100);
+      const cachedEvents = queryClient.getQueryData<SignalEvent[]>(['live-events']) ?? [];
+      return mergeLiveEvents(cachedEvents, fetchedEvents);
+    },
     staleTime: 30000,
   });
+
+  useEffect(() => {
+    if (connectionStatus === 'connected') {
+      void query.refetch();
+    }
+  }, [connectionStatus, query]);
 
   useSocketSubscription((type, payload) => {
     if (type === WEBSOCKET_EVENTS.EVENT_INGESTED) {
       queryClient.setQueryData<SignalEvent[]>(['live-events'], (old) => {
-        if (!old) return [payload];
-        const next = [payload, ...old.filter((event) => event.id !== payload.id)];
-        return next.slice(0, 100);
+        return mergeLiveEvents(old ?? [], [payload]);
       });
     }
   });

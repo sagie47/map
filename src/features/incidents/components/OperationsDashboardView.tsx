@@ -10,6 +10,7 @@ import { useReceivers } from "../../receivers/hooks";
 import { ConnectionBanner } from "../../connection/components/ConnectionBanner";
 import { ToastContainer } from "../../notifications/components/ToastContainer";
 import { useSocketConnection } from "../../connection/hooks";
+import { cn } from "../../../utils/cn";
 
 const GlobeView = lazy(() =>
   import("../../../components/GlobeView").then((module) => ({
@@ -45,6 +46,28 @@ export function OperationsDashboardView() {
 
   const selectedIncident = incidents.find((i) => i.id === selectedIncidentId) || null;
 
+  const isEditableTarget = (target: EventTarget | null) => {
+    const element = target instanceof HTMLElement ? target : null;
+    if (!element) {
+      return false;
+    }
+
+    const editableAncestor = element.closest("input, textarea, select, [contenteditable='true']");
+    if (!(editableAncestor instanceof HTMLElement)) {
+      return false;
+    }
+
+    if (
+      editableAncestor instanceof HTMLInputElement ||
+      editableAncestor instanceof HTMLTextAreaElement ||
+      editableAncestor instanceof HTMLSelectElement
+    ) {
+      return !editableAncestor.disabled && !editableAncestor.hasAttribute("readonly");
+    }
+
+    return editableAncestor.isContentEditable;
+  };
+
   useEffect(() => {
     if (incidents.length > 0 && selectedIncidentId && !selectedIncident) {
       setSelectedIncidentId(null);
@@ -53,6 +76,10 @@ export function OperationsDashboardView() {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (isEditableTarget(event.target)) {
+        return;
+      }
+
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "b") {
         event.preventDefault();
         setSidebarCollapsed((value) => !value);
@@ -68,7 +95,7 @@ export function OperationsDashboardView() {
       id: `incident-${incident.id}`,
       label: `${incident.severity.toUpperCase()} ${incident.domainType.toUpperCase()} ${incident.id}`,
       tone:
-        incident.severity === "high"
+        incident.severity === "high" || incident.severity === "critical"
           ? "text-red-400"
           : incident.severity === "medium"
             ? "text-[#f97316]"
@@ -91,11 +118,17 @@ export function OperationsDashboardView() {
         <ToastContainer />
 
         <div className="pointer-events-none absolute left-4 top-4 z-[1000] flex max-w-[calc(100%-2rem)] flex-col md:left-6 md:top-6">
-          <div className={`pointer-events-auto relative max-w-full transition-[width] duration-200 ${leftHudCollapsed ? "w-14" : "w-fit"}`}>
+          <div
+            id="operations-left-hud"
+            className={cn("pointer-events-auto relative max-w-full transition-[width] duration-200", leftHudCollapsed ? "w-14" : "w-fit")}
+          >
             <button
               type="button"
               onClick={() => setLeftHudCollapsed((value) => !value)}
               className="absolute left-3 top-3 z-20 hidden h-9 w-9 items-center justify-center border border-[#1f1f1f] bg-[#111] text-zinc-300 transition-colors hover:bg-[#171717] hover:text-white md:flex"
+              aria-label={leftHudCollapsed ? "Expand left HUD" : "Collapse left HUD"}
+              aria-expanded={!leftHudCollapsed}
+              aria-controls="operations-left-hud"
               title={leftHudCollapsed ? "Expand left HUD" : "Collapse left HUD"}
             >
               {leftHudCollapsed ? <PanelRightOpen className="h-4 w-4 rotate-180" /> : <PanelRightClose className="h-4 w-4 rotate-180" />}
@@ -128,11 +161,10 @@ export function OperationsDashboardView() {
                   <button
                     type="button"
                     onClick={() => setViewMode("map")}
-                    className={`touch-target inline-flex items-center gap-2 rounded-full px-3 text-[10px] font-mono uppercase tracking-[0.16em] transition-colors ${
-                      viewMode === "map"
-                        ? "bg-[#f97316] text-black"
-                        : "text-zinc-300 hover:bg-[#111]"
-                    }`}
+                    className={cn(
+                      "touch-target inline-flex items-center gap-2 rounded-full px-3 text-[10px] font-mono uppercase tracking-[0.16em] transition-colors",
+                      viewMode === "map" ? "bg-[#f97316] text-black" : "text-zinc-300 hover:bg-[#111]",
+                    )}
                   >
                     <MapIcon className="h-4 w-4" />
                     Map
@@ -140,11 +172,10 @@ export function OperationsDashboardView() {
                   <button
                     type="button"
                     onClick={() => setViewMode("globe")}
-                    className={`touch-target inline-flex items-center gap-2 rounded-full px-3 text-[10px] font-mono uppercase tracking-[0.16em] transition-colors ${
-                      viewMode === "globe"
-                        ? "bg-[#f97316] text-black"
-                        : "text-zinc-300 hover:bg-[#111]"
-                    }`}
+                    className={cn(
+                      "touch-target inline-flex items-center gap-2 rounded-full px-3 text-[10px] font-mono uppercase tracking-[0.16em] transition-colors",
+                      viewMode === "globe" ? "bg-[#f97316] text-black" : "text-zinc-300 hover:bg-[#111]",
+                    )}
                   >
                     <Compass className="h-4 w-4" />
                     Globe
@@ -225,14 +256,19 @@ export function OperationsDashboardView() {
       </div>
 
       <div
-        className={`relative hidden border-l border-[#1f1f1f] bg-[#0a0a0a] transition-[width] duration-200 md:flex ${
-          sidebarCollapsed ? "w-14" : "w-96"
-        }`}
+        id="operations-right-sidebar"
+        className={cn(
+          "relative hidden border-l border-[#1f1f1f] bg-[#0a0a0a] transition-[width] duration-200 md:flex",
+          sidebarCollapsed ? "w-14" : "w-96",
+        )}
       >
         <button
           type="button"
           onClick={() => setSidebarCollapsed((value) => !value)}
           className="absolute left-1/2 top-4 z-20 flex h-9 w-9 -translate-x-1/2 items-center justify-center border border-[#1f1f1f] bg-[#111] text-zinc-300 transition-colors hover:bg-[#171717] hover:text-white"
+          aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-expanded={!sidebarCollapsed}
+          aria-controls="operations-right-sidebar"
           title={sidebarCollapsed ? "Expand sidebar (Ctrl/Cmd+B)" : "Collapse sidebar (Ctrl/Cmd+B)"}
         >
           {sidebarCollapsed ? <PanelRightOpen className="h-4 w-4" /> : <PanelRightClose className="h-4 w-4" />}
@@ -240,9 +276,16 @@ export function OperationsDashboardView() {
 
         {sidebarCollapsed ? (
           <div
+            tabIndex={0}
             className="flex h-full flex-col items-center pt-16"
             onMouseEnter={() => setShowCollapsedPreview(true)}
             onMouseLeave={() => setShowCollapsedPreview(false)}
+            onFocus={() => setShowCollapsedPreview(true)}
+            onBlur={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                setShowCollapsedPreview(false);
+              }
+            }}
           >
             <div className="relative flex items-center justify-center">
               <div className="h-2.5 w-2.5 rounded-full bg-[#22c55e] shadow-[0_0_10px_rgba(34,197,94,0.9)]" />
@@ -271,7 +314,7 @@ export function OperationsDashboardView() {
                         }}
                         className="w-full border border-[#1a1a1a] bg-[#0b0b0b] px-2 py-2 text-left transition-colors hover:border-[#333] hover:bg-[#101010]"
                       >
-                        <div className={`text-[10px] font-mono uppercase tracking-[0.16em] ${item.tone}`}>{item.label}</div>
+                        <div className={cn("text-[10px] font-mono uppercase tracking-[0.16em]", item.tone)}>{item.label}</div>
                       </button>
                     ))
                   ) : (
