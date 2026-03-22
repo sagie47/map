@@ -54,22 +54,6 @@ interface CelesTrakSatellite {
   MEAN_ANOMALY?: number;
 }
 
-interface CelesTrakResponse {
-  name: string;
-  header: {
-    catalogCreator: string;
-    catalogNumber: number;
-    title: string;
-    created: string;
-  };
-  data: CelesTrakSatellite[];
-}
-
-type CelesTrakApiPayload =
-  | CelesTrakSatellite[]
-  | CelesTrakResponse
-  | { data?: CelesTrakSatellite[] };
-
 export class CelesTrakAdapter extends BaseAdapter {
   sourceName = 'celestrak';
   mode: 'streaming' | 'polling' = 'polling';
@@ -112,7 +96,7 @@ export class CelesTrakAdapter extends BaseAdapter {
   }
 
   private async fetchGroup(group: CelesTrakGroup): Promise<void> {
-    const url = `https://celestrak.org/NORAD/elements/gp.php?GROUP=${group}&FORMAT=json`;
+    const url = `https://celestrak.org/NORAD/elements/gp.php?GROUP=${group}&FORMAT=tle`;
     
     const response = await fetch(url, {
       headers: {
@@ -124,8 +108,8 @@ export class CelesTrakAdapter extends BaseAdapter {
       throw new Error(`CelesTrak API error: ${response.status}`);
     }
 
-    const payload = await response.json() as CelesTrakApiPayload;
-    const satellites = this.extractSatellites(payload);
+    const payload = await response.text();
+    const satellites = this.parseTlePayload(payload);
 
     let skipped = 0;
     for (const sat of satellites) {
@@ -144,14 +128,31 @@ export class CelesTrakAdapter extends BaseAdapter {
     console.log(`[CelesTrak] Fetched ${satellites.length} satellites from group '${group}' (${skipped} skipped invalid TLE)`);
   }
 
-  private extractSatellites(payload: CelesTrakApiPayload): CelesTrakSatellite[] {
-    if (Array.isArray(payload)) {
-      return payload;
+  private parseTlePayload(payload: string): CelesTrakSatellite[] {
+    const lines = payload
+      .split(/\r?\n/)
+      .map((line) => line.trimEnd())
+      .filter(Boolean);
+    const satellites: CelesTrakSatellite[] = [];
+
+    for (let index = 0; index + 2 < lines.length; index += 3) {
+      const name = lines[index]?.trim();
+      const line1 = lines[index + 1]?.trim();
+      const line2 = lines[index + 2]?.trim();
+
+      if (!name || !line1?.startsWith('1 ') || !line2?.startsWith('2 ')) {
+        continue;
+      }
+
+      satellites.push({
+        OBJECT_NAME: name,
+        OBJECT_ID: line1.slice(2, 7).trim() || name,
+        TLE_LINE1: line1,
+        TLE_LINE2: line2,
+      });
     }
-    if (payload && Array.isArray((payload as CelesTrakResponse).data)) {
-      return (payload as CelesTrakResponse).data;
-    }
-    return [];
+
+    return satellites;
   }
 
   private hasValidTle(sat: CelesTrakSatellite): boolean {

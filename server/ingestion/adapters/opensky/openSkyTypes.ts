@@ -26,6 +26,8 @@ export interface OpenSkyResponse {
 export interface OpenSkyConfig {
   username?: string;
   password?: string;
+  clientId?: string;
+  clientSecret?: string;
   boundingBox?: {
     latMin: number;
     latMax: number;
