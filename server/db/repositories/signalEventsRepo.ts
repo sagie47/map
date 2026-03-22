@@ -36,6 +36,16 @@ export class SignalEventsRepo {
     `).all(incidentId);
   }
 
+  listRecent(limit: number = 100) {
+    return db.prepare(`
+      SELECT e.*, r.station_name, r.station_code
+      FROM signal_events e
+      LEFT JOIN receiver_stations r ON e.receiver_station_id = r.id
+      ORDER BY e.detected_at DESC
+      LIMIT ?
+    `).all(limit);
+  }
+
   getIncidentStats(incidentId: string) {
     return db.prepare(`
       SELECT 

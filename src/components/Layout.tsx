@@ -1,6 +1,8 @@
-import type { ReactNode } from "react";
-import { BarChart2, List, Map, Radio } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { BarChart2, ChevronLeft, ChevronRight, List, Map, Radio } from "lucide-react";
 import { NavLink, Outlet } from "react-router";
+
+import { cn } from "../utils/cn";
 
 const navItems = [
   {
@@ -26,6 +28,8 @@ const navItems = [
 ];
 
 export function Layout() {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
   return (
     <div className="flex min-h-screen min-h-[100dvh] flex-col bg-black font-sans text-zinc-300 md:h-screen md:min-h-0 md:flex-row md:overflow-hidden">
       <header className="sticky top-0 z-30 border-b border-[#1f1f1f] bg-[#0a0a0a]/95 backdrop-blur md:hidden pt-safe">
@@ -56,10 +60,16 @@ export function Layout() {
         </nav>
       </header>
 
-      <aside className="hidden w-16 shrink-0 flex-col border-r border-[#1f1f1f] bg-[#0a0a0a] md:flex md:w-64">
+      <aside
+        id="primary-sidebar"
+        className={cn(
+          "relative hidden shrink-0 flex-col border-r border-[#1f1f1f] bg-[#0a0a0a] transition-[width] duration-200 md:flex",
+          isCollapsed ? "md:w-16" : "md:w-64",
+        )}
+      >
         <div className="flex h-16 items-center justify-center border-b border-[#1f1f1f] md:justify-start md:px-6">
           <Radio className="h-5 w-5 text-zinc-500" />
-          <div className="ml-3 hidden flex-col md:flex">
+          <div className={cn("ml-3 flex-col", isCollapsed ? "hidden" : "hidden md:flex")}>
             <span className="text-lg leading-none font-bold uppercase tracking-[0.2em] text-zinc-100">
               SentriX
             </span>
@@ -67,9 +77,21 @@ export function Layout() {
           </div>
         </div>
 
+        <button
+          type="button"
+          onClick={() => setIsCollapsed((value) => !value)}
+          className="absolute -right-3 top-20 z-20 hidden h-6 w-6 items-center justify-center rounded-full border border-[#333] bg-[#1f1f1f] text-zinc-400 shadow-md transition-colors hover:bg-[#333] hover:text-zinc-100 md:flex"
+          aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-expanded={!isCollapsed}
+          aria-controls="primary-sidebar"
+          title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {isCollapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
+        </button>
+
         <nav className="flex flex-1 flex-col gap-1 py-4">
           {navItems.map((item) => (
-            <NavItem key={item.to} {...item} />
+            <NavItem key={item.to} {...item} isCollapsed={isCollapsed} />
           ))}
         </nav>
 
@@ -79,7 +101,7 @@ export function Layout() {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#22c55e] opacity-75"></span>
               <span className="relative inline-flex h-2 w-2 rounded-full bg-[#22c55e]"></span>
             </span>
-            <span className="hud-text-muted hidden text-[#22c55e] md:block">
+            <span className={cn("hud-text-muted text-[#22c55e]", isCollapsed ? "hidden" : "hidden md:block")}>
               LINK ESTABLISHED
             </span>
           </div>
@@ -98,11 +120,13 @@ function NavItem({
   icon,
   label,
   mobile = false,
+  isCollapsed = false,
 }: {
   to: string;
   icon: ReactNode;
   label: string;
   mobile?: boolean;
+  isCollapsed?: boolean;
   key?: string;
 }) {
   return (
@@ -119,7 +143,13 @@ function NavItem({
       }}
     >
       <div className="flex h-8 w-8 items-center justify-center opacity-70">{icon}</div>
-      <span className={mobile ? "pr-1" : "ml-2 hidden text-[11px] font-mono uppercase tracking-[0.15em] md:block"}>
+      <span
+        className={
+          mobile
+            ? "pr-1"
+            : cn("ml-2 text-[11px] font-mono uppercase tracking-[0.15em]", isCollapsed ? "hidden" : "hidden md:block")
+        }
+      >
         {label}
       </span>
     </NavLink>

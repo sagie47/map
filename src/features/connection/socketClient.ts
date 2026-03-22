@@ -6,6 +6,9 @@ class SocketClient {
   private ws: WebSocket | null = null;
   private reconnectTimeout: NodeJS.Timeout | null = null;
   private handlers: Set<MessageHandler> = new Set();
+  private reconnectAttempt = 0;
+  private intentionalClose = false;
+  private lastMessageStatusTs = 0;
 
   connect() {
     if (this.ws && (this.ws.readyState === WebSocket.CONNECTING || this.ws.readyState === WebSocket.OPEN)) {
@@ -14,6 +17,7 @@ class SocketClient {
 
     const { setStatus, setLastMessageAt } = useConnectionStore.getState();
     setStatus('connecting');
+    this.intentionalClose = false;
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${protocol}//${window.location.host}`;
@@ -22,11 +26,16 @@ class SocketClient {
 
     this.ws.onopen = () => {
       setStatus('connected');
+      this.reconnectAttempt = 0;
+      this.lastMessageStatusTs = 0;
     };
 
     this.ws.onclose = () => {
       setStatus('disconnected');
-      this.scheduleReconnect();
+      this.ws = null;
+      if (!this.intentionalClose) {
+        this.scheduleReconnect();
+      }
     };
 
     this.ws.onerror = () => {
@@ -34,7 +43,11 @@ class SocketClient {
     };
 
     this.ws.onmessage = (event) => {
-      setLastMessageAt(new Date().toISOString());
+      const now = Date.now();
+      if (now - this.lastMessageStatusTs >= 1000) {
+        this.lastMessageStatusTs = now;
+        setLastMessageAt(new Date(now).toISOString());
+      }
       try {
         const { type, payload } = JSON.parse(event.data);
         this.handlers.forEach(handler => handler(type, payload));
@@ -45,10 +58,13 @@ class SocketClient {
   }
 
   disconnect() {
+    this.intentionalClose = true;
     if (this.reconnectTimeout) {
       clearTimeout(this.reconnectTimeout);
       this.reconnectTimeout = null;
     }
+    this.reconnectAttempt = 0;
+    this.lastMessageStatusTs = 0;
     if (this.ws) {
       this.ws.onclose = null; // Prevent reconnect
       this.ws.close();
@@ -59,10 +75,15 @@ class SocketClient {
 
   private scheduleReconnect() {
     if (this.reconnectTimeout) return;
+    const cappedAttempt = Math.min(this.reconnectAttempt, 5);
+    const baseDelay = 1000 * (2 ** cappedAttempt);
+    const jitter = Math.floor(Math.random() * 500);
+    const delay = Math.min(30000, baseDelay + jitter);
+    this.reconnectAttempt++;
     this.reconnectTimeout = setTimeout(() => {
       this.reconnectTimeout = null;
       this.connect();
-    }, 3000);
+    }, delay);
   }
 
   subscribe(handler: MessageHandler) {

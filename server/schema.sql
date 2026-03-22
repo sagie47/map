@@ -88,6 +88,7 @@ CREATE TABLE IF NOT EXISTS incident_state_transitions (
 CREATE INDEX IF NOT EXISTS idx_notifications_incident_id ON notifications(incident_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_status ON notifications(status);
 CREATE INDEX IF NOT EXISTS idx_notifications_sent_at ON notifications(sent_at);
+CREATE INDEX IF NOT EXISTS idx_signal_events_detected_at ON signal_events(detected_at DESC);
 CREATE INDEX IF NOT EXISTS idx_transitions_incident_id ON incident_state_transitions(incident_id);
 CREATE INDEX IF NOT EXISTS idx_transitions_incident_at ON incident_state_transitions(transitioned_at);
 
