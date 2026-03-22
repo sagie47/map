@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { Suspense, lazy, useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
+import { Compass, Map as MapIcon } from "lucide-react";
 import { MapView } from "../../../components/MapView";
 import { IncidentDrawer } from "./IncidentDrawer";
 import { EventFeed } from "./EventFeed";
@@ -10,11 +11,18 @@ import { ConnectionBanner } from "../../connection/components/ConnectionBanner";
 import { ToastContainer } from "../../notifications/components/ToastContainer";
 import { useSocketConnection } from "../../connection/hooks";
 
+const GlobeView = lazy(() =>
+  import("../../../components/GlobeView").then((module) => ({
+    default: module.GlobeView,
+  })),
+);
+
 export function OperationsDashboardView() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(
     searchParams.get("incident"),
   );
+  const [viewMode, setViewMode] = useState<"map" | "globe">("map");
 
   useSocketConnection();
 
@@ -61,6 +69,32 @@ export function OperationsDashboardView() {
                 ACTIVE
               </span>
             </div>
+            <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-[#1f1f1f] bg-[#090909]/90 p-1 backdrop-blur-sm">
+              <button
+                type="button"
+                onClick={() => setViewMode("map")}
+                className={`touch-target inline-flex items-center gap-2 rounded-full px-3 text-[10px] font-mono uppercase tracking-[0.16em] transition-colors ${
+                  viewMode === "map"
+                    ? "bg-[#f97316] text-black"
+                    : "text-zinc-300 hover:bg-[#111]"
+                }`}
+              >
+                <MapIcon className="h-4 w-4" />
+                Map
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("globe")}
+                className={`touch-target inline-flex items-center gap-2 rounded-full px-3 text-[10px] font-mono uppercase tracking-[0.16em] transition-colors ${
+                  viewMode === "globe"
+                    ? "bg-[#f97316] text-black"
+                    : "text-zinc-300 hover:bg-[#111]"
+                }`}
+              >
+                <Compass className="h-4 w-4" />
+                Globe
+              </button>
+            </div>
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-3 pointer-events-auto md:mt-8 md:flex md:gap-4">
@@ -88,12 +122,31 @@ export function OperationsDashboardView() {
           </div>
         </div>
 
-        <MapView
-          incidents={incidents}
-          receivers={receivers}
-          selectedIncidentId={selectedIncidentId}
-          onSelectIncident={setSelectedIncidentId}
-        />
+        {viewMode === "globe" ? (
+          <Suspense
+            fallback={
+              <div className="flex h-full w-full items-center justify-center bg-black">
+                <div className="hud-panel border-[#2a2a2a] px-4 py-3 text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-300">
+                  Loading globe renderer...
+                </div>
+              </div>
+            }
+          >
+            <GlobeView
+              incidents={incidents}
+              receivers={receivers}
+              selectedIncidentId={selectedIncidentId}
+              onSelectIncident={setSelectedIncidentId}
+            />
+          </Suspense>
+        ) : (
+          <MapView
+            incidents={incidents}
+            receivers={receivers}
+            selectedIncidentId={selectedIncidentId}
+            onSelectIncident={setSelectedIncidentId}
+          />
+        )}
 
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 md:hidden">
           <div className="pointer-events-auto mx-2 rounded-t-2xl border border-b-0 border-[#1f1f1f] bg-[#0a0a0a]/95 shadow-[0_-16px_48px_rgba(0,0,0,0.65)] backdrop-blur-sm">
